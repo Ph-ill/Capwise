@@ -61,6 +61,7 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
     setExitAnimation(animationProps);
 
     // Use the handleInteraction from context
+    // Use the handleInteraction from context
     await contextHandleInteraction(action, currentMovie, currentIndex);
 
     // Move to the next movie and fetch more if needed
@@ -252,7 +253,7 @@ function App() {
                 <BarChartIcon sx={{ mr: 0.5 }} /> Infographic
               </Button>
               <Button color="inherit" component={Link} to="/watchlist">
-                <Bookmark sx={{ mr: 0.5 }} /> Watchlist
+                <Bookmark sx={{ mr: 0.5 }} /> Records
               </Button>
               <Button color="inherit" component={Link} to="/settings">
                 <SettingsIcon sx={{ mr: 0.5 }} /> Settings

@@ -3,6 +3,7 @@ import { Container, Typography, Box, Button, FormControl, InputLabel, Select, Me
 import { themes } from '../themes';
 import { useTheme } from '@mui/material/styles';
 import { useNotification } from '../notifications/NotificationContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 function Settings({ setThemeIndex, currentThemeIndex }) {
   const theme = useTheme();
@@ -10,6 +11,7 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
   const [radarrUrl, setRadarrUrl] = useState('');
   const [radarrApiKey, setRadarrApiKey] = useState('');
   const { showNotification } = useNotification();
+  const [openConfirmModal, setOpenConfirmModal] = useState(false);
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('cineswipeUserId');
@@ -25,13 +27,21 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
     showNotification('Radarr settings saved successfully!', 'success');
   };
 
-  const handleResetProfile = async () => {
+  const handleOpenConfirmModal = () => {
+    setOpenConfirmModal(true);
+  };
+
+  const handleCloseConfirmModal = () => {
+    setOpenConfirmModal(false);
+  };
+
+  const handleResetProfileConfirm = async () => {
+    handleCloseConfirmModal(); // Close the modal first
     if (!userId) {
       showNotification('User ID not found.', 'error');
       return;
     }
 
-    // Instead of window.confirm, we'll just proceed and show a notification
     try {
       const response = await fetch(`http://localhost:5001/api/users/reset-profile`, {
         method: 'POST',
@@ -43,9 +53,8 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
       const data = await response.json();
       if (response.ok) {
         showNotification(data.message, 'success');
-        // Optionally, clear local storage related to user profile or refresh
-        localStorage.removeItem('selectedThemeIndex'); // Reset theme to default
-        window.location.reload(); // Reload app to reflect changes
+        localStorage.removeItem('selectedThemeIndex');
+        window.location.reload();
       } else {
         showNotification(data.error || 'Failed to reset profile', 'error');
       }
@@ -60,7 +69,7 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
   };
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Settings
@@ -135,11 +144,19 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
           <Typography variant="h5" component="h2" gutterBottom>
             User Profile
           </Typography>
-          <Button variant="contained" color="error" onClick={handleResetProfile} sx={{ mt: 2 }}>
+          <Button variant="contained" color="error" onClick={handleOpenConfirmModal} sx={{ mt: 2 }}>
             Reset My Profile
           </Button>
         </Box>
       </Box>
+
+      <ConfirmationModal
+        open={openConfirmModal}
+        onClose={handleCloseConfirmModal}
+        onConfirm={handleResetProfileConfirm}
+        title="Confirm Profile Reset"
+        message="Are you sure you want to reset your profile? This action cannot be undone and will clear all your movie interactions and preferences."
+      />
     </Container>
   );
 }

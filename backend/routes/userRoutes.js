@@ -10,7 +10,7 @@ router.get('/profile/:userId', async (req, res) => {
         if (!userProfile) {
             return res.status(404).json({ error: 'User profile not found' });
         }
-        res.json({ profile: userProfile.tasteProfile });
+        res.json({ profile: userProfile });
     } catch (error) {
         console.error('Error fetching user profile:', error);
         res.status(500).json({ error: 'Failed to fetch user profile' });
@@ -77,6 +77,27 @@ router.post('/reset-profile', async (req, res) => {
     } catch (error) {
         console.error('Error resetting user profile:', error);
         res.status(500).json({ error: 'Failed to reset user profile' });
+    }
+});
+
+router.delete('/interaction/:userId/:movieId', async (req, res) => {
+    const { userId, movieId } = req.params;
+    const userStore = req.db.userStore;
+
+    if (!userId || !movieId) {
+        return res.status(400).json({ error: 'Missing userId or movieId' });
+    }
+
+    try {
+        const result = await userStore.removeInteraction(userId, Number(movieId));
+        if (result.removedCount > 0) {
+            res.status(200).json({ message: 'Interaction removed successfully', removedCount: result.removedCount });
+        } else {
+            res.status(404).json({ message: 'Movie interaction not found for this user.' });
+        }
+    } catch (error) {
+        console.error('Error removing interaction:', error);
+        res.status(500).json({ error: 'Failed to remove interaction' });
     }
 });
 

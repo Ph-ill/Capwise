@@ -98,6 +98,36 @@ class UserStore {
         });
     }
 
+    async removeInteraction(userId, movieIdToRemove) {
+        return new Promise((resolve, reject) => {
+            this.db.findOne({ userId }, (err, user) => {
+                if (err) return reject(err);
+                if (!user) return reject(new Error('User not found'));
+
+                // Filter out all interactions for the movieIdToRemove
+                const initialInteractionCount = user.interactions.length;
+                user.interactions = user.interactions.filter(interaction => interaction.movieId !== movieIdToRemove);
+                const removedCount = initialInteractionCount - user.interactions.length;
+
+                // Remove from suggestedMovies as well to make it eligible for suggestions again
+                user.suggestedMovies = user.suggestedMovies.filter(suggested => suggested.movieId !== movieIdToRemove);
+
+                // Recalculate taste profile from scratch
+                user.tasteProfile = this._recalculateTasteProfile(user.interactions);
+
+                this.db.update(
+                    { userId },
+                    { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile, suggestedMovies: user.suggestedMovies } },
+                    {},
+                    (err, numReplaced) => {
+                        if (err) return reject(err);
+                        resolve({ numReplaced, removedCount });
+                    }
+                );
+            });
+        });
+    }
+
     _sanitizeKey(key) {
         return key.replace(/\./g, '_'); // Replace dots with underscores
     }

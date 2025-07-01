@@ -74,8 +74,13 @@ const MovieCard = ({ movie }) => {
             )}
             {' '}({movie.releaseYear})
           </Typography>
+          {movie.director && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Director: {movie.director}
+            </Typography>
+          )}
           {movie.genres && movie.genres.length > 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Genres: {movie.genres.join(', ')}
             </Typography>
           )}

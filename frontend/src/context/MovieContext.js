@@ -59,6 +59,7 @@ export const MovieProvider = ({ children }) => {
 
     try {
       await recordInteraction(userId, movie.id, action, {
+        id: movie.id, // Ensure movie ID is stored in movieDetails
         title: movie.title,
         genres: movie.genres,
         director: movie.director,

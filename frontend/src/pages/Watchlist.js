@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, CircularProgress, Grid } from '@mui/material';
-import MovieCard from '../components/MovieCard'; // Assuming MovieCard can display full movie details
+import React, { useState, useEffect, useCallback } from 'react';
+import { Container, Typography, Box, CircularProgress, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import WatchlistItem from '../components/WatchlistItem'; // Import the new WatchlistItem component
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -22,28 +22,47 @@ function Watchlist() {
   const [watchlistMovies, setWatchlistMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [filter, setFilter] = useState('watchlist'); // Default filter to watchlist
+
+  const getWatchlist = useCallback(async () => {
+    if (!userId) return; // Ensure userId is available before fetching
+    setLoading(true);
+    const response = await fetch(`${API_BASE_URL}/users/profile/${userId}`);
+    if (response.ok) {
+      const data = await response.json();
+      setWatchlistMovies(data.profile.interactions || []);
+    } else {
+      console.error('Error fetching user profile for watchlist filtering');
+      setWatchlistMovies([]);
+    }
+    setLoading(false);
+  }, [userId]); // Dependency on userId
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('cineswipeUserId');
     if (storedUserId) {
       setUserId(storedUserId);
     } else {
-      // Handle case where userId is not found (e.g., redirect to home or show a message)
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     if (userId) {
-      const getWatchlist = async () => {
-        setLoading(true);
-        const movies = await fetchWatchlist(userId);
-        setWatchlistMovies(movies);
-        setLoading(false);
-      };
       getWatchlist();
     }
-  }, [userId]);
+  }, [userId, getWatchlist]); // Dependency on userId and getWatchlist
+
+  const handleFilterChange = (event, newFilter) => {
+    if (newFilter !== null) { // Prevent unselecting all
+      setFilter(newFilter);
+    }
+  };
+
+  const filteredMovies = watchlistMovies.filter(movie => {
+    if (filter === 'all') return true;
+    return movie.type === filter;
+  });
 
   if (loading) {
     return (
@@ -57,22 +76,33 @@ function Watchlist() {
   }
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="md">
       <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Your Watchlist
-        </Typography>
-        {watchlistMovies.length > 0 ? (
-          <Grid container spacing={3}>
-            {watchlistMovies.map((movie) => (
-              <Grid item key={movie.id} xs={12} sm={6} md={4}>
-                {/* MovieCard might need adjustments to display nicely in a grid */}
-                <MovieCard movie={movie} />
-              </Grid>
+
+        <ToggleButtonGroup
+          value={filter}
+          exclusive
+          onChange={handleFilterChange}
+          aria-label="movie interaction filter"
+          sx={{ mb: 3 }}
+        >
+          <ToggleButton value="all" aria-label="all movies">All</ToggleButton>
+          <ToggleButton value="strong_like" aria-label="super liked">Super Liked</ToggleButton>
+          <ToggleButton value="like" aria-label="liked">Liked</ToggleButton>
+          <ToggleButton value="dislike" aria-label="disliked">Disliked</ToggleButton>
+          <ToggleButton value="strong_dislike" aria-label="super disliked">Super Disliked</ToggleButton>
+          <ToggleButton value="not_interested" aria-label="not interested">Not Interested</ToggleButton>
+          <ToggleButton value="watchlist" aria-label="watchlist">Watchlist</ToggleButton>
+        </ToggleButtonGroup>
+
+        {filteredMovies.length > 0 ? (
+          <Box sx={{ width: '100%' }}>
+            {filteredMovies.map((movie) => (
+              <WatchlistItem key={movie.movieDetails.id} movie={movie.movieDetails} userId={userId} onRemove={getWatchlist} />
             ))}
-          </Grid>
+          </Box>
         ) : (
-          <Typography variant="h6">Your watchlist is empty. Start swiping to add movies!</Typography>
+          <Typography variant="h6">No movies found for this filter.</Typography>
         )}
       </Box>
     </Container>
