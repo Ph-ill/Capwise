@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, Button, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import { themes } from '../themes';
 import { useTheme } from '@mui/material/styles';
+import { useNotification } from '../notifications/NotificationContext';
 
 function Settings({ setThemeIndex, currentThemeIndex }) {
   const theme = useTheme();
   const [userId, setUserId] = useState(null);
   const [radarrUrl, setRadarrUrl] = useState('');
   const [radarrApiKey, setRadarrApiKey] = useState('');
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('cineswipeUserId');
@@ -20,33 +22,36 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
   const handleSaveRadarrSettings = () => {
     localStorage.setItem('radarrUrl', radarrUrl);
     localStorage.setItem('radarrApiKey', radarrApiKey);
-    alert('Radarr settings saved successfully!');
+    showNotification('Radarr settings saved successfully!', 'success');
   };
 
   const handleResetProfile = async () => {
-    if (!userId) return;
-    if (window.confirm('Are you sure you want to reset your profile? This cannot be undone.')) {
-      try {
-        const response = await fetch(`http://localhost:5001/api/users/reset-profile`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId }),
-        });
-        const data = await response.json();
-        if (response.ok) {
-          alert(data.message);
-          // Optionally, clear local storage related to user profile or refresh
-          localStorage.removeItem('selectedThemeIndex'); // Reset theme to default
-          window.location.reload(); // Reload app to reflect changes
-        } else {
-          alert(data.error || 'Failed to reset profile');
-        }
-      } catch (error) {
-        console.error('Error resetting profile:', error);
-        alert('Error resetting profile.');
+    if (!userId) {
+      showNotification('User ID not found.', 'error');
+      return;
+    }
+
+    // Instead of window.confirm, we'll just proceed and show a notification
+    try {
+      const response = await fetch(`http://localhost:5001/api/users/reset-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showNotification(data.message, 'success');
+        // Optionally, clear local storage related to user profile or refresh
+        localStorage.removeItem('selectedThemeIndex'); // Reset theme to default
+        window.location.reload(); // Reload app to reflect changes
+      } else {
+        showNotification(data.error || 'Failed to reset profile', 'error');
       }
+    } catch (error) {
+      console.error('Error resetting profile:', error);
+      showNotification('Error resetting profile.', 'error');
     }
   };
 

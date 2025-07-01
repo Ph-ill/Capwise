@@ -1,17 +1,19 @@
 import { Card, CardContent, Typography, CardMedia, Link as MuiLink, Box, Button } from '@mui/material';
 import { AddCircleOutline, OpenInNew } from '@mui/icons-material';
+import { useNotification } from '../notifications/NotificationContext';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
 const MovieCard = ({ movie }) => {
   const imdbUrl = movie.imdbId ? `https://www.imdb.com/title/${movie.imdbId}/` : null;
+  const { showNotification } = useNotification();
 
   const handleAddToRadarr = async () => {
     const radarrUrl = localStorage.getItem('radarrUrl');
     const radarrApiKey = localStorage.getItem('radarrApiKey');
 
     if (!radarrUrl || !radarrApiKey) {
-      alert('Please configure Radarr URL and API Key in settings.');
+      showNotification('Please configure Radarr URL and API Key in settings.', 'warning');
       return;
     }
 
@@ -30,14 +32,14 @@ const MovieCard = ({ movie }) => {
       });
 
       if (response.ok) {
-        alert(`${movie.title} added to Radarr successfully!`);
+        showNotification(`${movie.title} added to Radarr successfully!`, 'success');
       } else {
         const errorData = await response.json();
-        alert(`Failed to add ${movie.title} to Radarr: ${errorData.error || errorData.message || JSON.stringify(errorData)}`);
+        showNotification(`Failed to add ${movie.title} to Radarr: ${errorData.error || errorData.message || JSON.stringify(errorData)}`, 'error');
       }
     } catch (error) {
       console.error('Error adding to Radarr:', error);
-      alert(`Error adding ${movie.title} to Radarr. Details: ${error.message}`);
+      showNotification(`Error adding ${movie.title} to Radarr. Details: ${error.message}`, 'error');
     }
   };
 

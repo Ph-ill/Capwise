@@ -12,6 +12,8 @@ import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { themes } from './themes'; // Import the themes
 import { MovieContext, MovieProvider } from './context/MovieContext'; // Import MovieContext and MovieProvider
+import { NotificationProvider } from './notifications/NotificationContext';
+import Notification from './notifications/Notification';
 
 function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHotkeyModal }) {
   const {
@@ -236,7 +238,8 @@ function App() {
     <ThemeProvider theme={activeTheme.theme}>
       <CssBaseline />
       <Router>
-        <Box sx={{ background: activeTheme.backgroundGradient, minHeight: '100vh' }}>
+        <NotificationProvider>
+          <Box sx={{ background: activeTheme.backgroundGradient, minHeight: '100vh' }}>
           <AppBar position="static" sx={{ background: activeTheme.appBarGradient }}>
             <Toolbar>
               <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1.5, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
@@ -268,8 +271,10 @@ function App() {
             </Routes>
           </MovieProvider>
           <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+          <Notification />
         </Box>
-      </Router>
+      </NotificationProvider>
+    </Router>
     </ThemeProvider>
   );
 }
