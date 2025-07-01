@@ -35,7 +35,7 @@ export const themes = [
         },
         background: {
           default: '#282a36',
-          paper: '#282a36',
+          paper: '#383a4a', // Slightly lighter for contrast
         },
         text: {
           primary: '#f8f8f2',
@@ -61,7 +61,7 @@ export const themes = [
         },
         background: {
           default: '#272822',
-          paper: '#272822',
+          paper: '#373832', // Slightly lighter for contrast
         },
         text: {
           primary: '#F8F8F2',
@@ -87,7 +87,7 @@ export const themes = [
         },
         background: {
           default: '#fdf6e3',
-          paper: '#fdf6e3',
+          paper: '#eee8d5', // Slightly darker for contrast
         },
         text: {
           primary: '#586e75',
@@ -113,7 +113,7 @@ export const themes = [
         },
         background: {
           default: '#2E3440',
-          paper: '#2E3440',
+          paper: '#3B4252', // Slightly lighter for contrast
         },
         text: {
           primary: '#ECEFF4',
@@ -139,7 +139,7 @@ export const themes = [
         },
         background: {
           default: '#282C34',
-          paper: '#282C34',
+          paper: '#3A3F4B', // Slightly lighter for contrast
         },
         text: {
           primary: '#ABB2BF',
@@ -165,7 +165,7 @@ export const themes = [
         },
         background: {
           default: '#282828',
-          paper: '#282828',
+          paper: '#3C3836', // Slightly lighter for contrast
         },
         text: {
           primary: '#EBDBB2',
@@ -191,7 +191,7 @@ export const themes = [
         },
         background: {
           default: '#1A1B26',
-          paper: '#1A1B26',
+          paper: '#24283B', // Slightly lighter for contrast
         },
         text: {
           primary: '#C0CAF5',
@@ -217,7 +217,7 @@ export const themes = [
         },
         background: {
           default: '#24273A',
-          paper: '#24273A',
+          paper: '#363A4F', // Slightly lighter for contrast
         },
         text: {
           primary: '#CAD3F5',
@@ -243,7 +243,7 @@ export const themes = [
         },
         background: {
           default: '#0A0E14',
-          paper: '#0A0E14',
+          paper: '#1A1E24', // Slightly lighter for contrast
         },
         text: {
           primary: '#E6E1CF',

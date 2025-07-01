@@ -46,21 +46,21 @@ const MovieCard = ({ movie }) => {
   return (
     <Card sx={{
       width: '90vw', // Make it wider, relative to viewport width
-      maxWidth: 900, // Max width to prevent it from getting too big on very wide screens
-      height: '70vh', // Make it taller, relative to viewport height
-      maxHeight: 600, // Max height
+      maxWidth: 1000, // Increased max width to accommodate wider content
+      height: '85vh', // Make it taller, relative to viewport height
+      maxHeight: 750, // Max height
       display: 'flex',
       margin: 'auto',
-      mt: 5,
+      mt: 2, // Reduced top margin to fill space
       boxShadow: 3,
     }}>
       <CardMedia
         component="img"
-        sx={{ width: '40%', height: '100%', objectFit: 'cover', flexShrink: 0 }} // Image takes 40% width, fills height
+        sx={{ width: 'auto', height: '100%', objectFit: 'cover', flexShrink: 0, aspectRatio: '2 / 3' }} // Image width determined by height and aspect ratio
         image={movie.cover || 'https://via.placeholder.com/400x600?text=No+Image'}
         alt={movie.title}
       />
-      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 3 }}>
+      <CardContent sx={{ width: 500, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', p: 3 }}>
         <Box>
           <Typography gutterBottom variant="h4" component="div" sx={{ mb: 0 }}>
             {imdbUrl ? (

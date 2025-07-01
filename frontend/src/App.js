@@ -146,68 +146,72 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        
-
-        <Box sx={{ position: 'relative', width: '90vw', maxWidth: 900, height: '70vh', maxHeight: 600, mb: 2 }}>
-          <AnimatePresence initial={false}>
-            {currentMovie && (
-              <motion.div
-                key={currentMovie.id}
-                initial={{ opacity: 0, y: 50, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={exitAnimation}
-                transition={{ duration: 0.2 }}
-                style={{ position: 'absolute', width: '100%', height: '100%' }}
-              >
-                <MovieCard movie={currentMovie} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Box>
-
-        <Stack direction="row" spacing={2} sx={{ mt: 4, justifyContent: 'center', width: '100%' }}>
-          <Tooltip title="Strong Like (Arrow Up)">
-            <IconButton color="success" size="large" onClick={() => handleInteraction('strong_like')}>
-              <Favorite fontSize="large" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Dislike (Arrow Left)">
-            <IconButton color="warning" size="large" onClick={() => handleInteraction('dislike')}>
-              <ThumbDownAlt fontSize="large" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Like (Arrow Right)">
-            <IconButton color="primary" size="large" onClick={() => handleInteraction('like')}>
-              <ThumbUpAlt fontSize="large" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Strong Dislike (Arrow Down)">
-            <IconButton color="error" size="large" onClick={() => handleInteraction('strong_dislike')}>
-              <Block fontSize="large" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Save to Watchlist (Spacebar)">
-            <IconButton color="secondary" size="large" onClick={() => handleInteraction('watchlist')}>
-              <Bookmark fontSize="large" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Not Interested (Shift)">
-            <IconButton color="info" size="large" onClick={() => handleInteraction('not_interested')}>
-              <DoNotDisturbOn fontSize="large" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Undo Last Rating (Ctrl+Z)">
-            <IconButton color="inherit" size="large" onClick={handleUndo}>
-              <UndoIcon fontSize="large" />
-            </IconButton>
-          </Tooltip>
-        </Stack>
-
-        <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+    <Box sx={{
+      display: 'flex',
+      flexDirection: 'column',
+      minHeight: 'calc(100vh - 64px)', // Full viewport height minus AppBar height
+      alignItems: 'center',
+      justifyContent: 'space-between', // Distribute space vertically
+      pt: 2, // Padding top
+      pb: 2, // Padding bottom
+    }}>
+      <Box sx={{ position: 'relative', width: '90vw', maxWidth: 900, height: '85vh', maxHeight: 750 }}>
+        <AnimatePresence initial={false}>
+          {currentMovie && (
+            <motion.div
+              key={currentMovie.id}
+              initial={{ opacity: 0, y: 50, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={exitAnimation}
+              transition={{ duration: 0.2 }}
+              style={{ position: 'absolute', width: '100%', height: '100%' }}
+            >
+              <MovieCard movie={currentMovie} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Box>
-    </Container>
+
+      <Stack direction="row" spacing={2} sx={{ mt: 4, justifyContent: 'center', width: '100%' }}>
+        <Tooltip title="Strong Like (Arrow Up)">
+          <IconButton color="success" size="large" onClick={() => handleInteraction('strong_like')}>
+            <Favorite fontSize="large" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Dislike (Arrow Left)">
+          <IconButton color="warning" size="large" onClick={() => handleInteraction('dislike')}>
+            <ThumbDownAlt fontSize="large" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Like (Arrow Right)">
+          <IconButton color="primary" size="large" onClick={() => handleInteraction('like')}>
+            <ThumbUpAlt fontSize="large" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Strong Dislike (Arrow Down)">
+          <IconButton color="error" size="large" onClick={() => handleInteraction('strong_dislike')}>
+            <Block fontSize="large" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Save to Watchlist (Spacebar)">
+          <IconButton color="secondary" size="large" onClick={() => handleInteraction('watchlist')}>
+            <Bookmark fontSize="large" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Not Interested (Shift)">
+          <IconButton color="info" size="large" onClick={() => handleInteraction('not_interested')}>
+            <DoNotDisturbOn fontSize="large" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Undo Last Rating (Ctrl+Z)">
+          <IconButton color="inherit" size="large" onClick={handleUndo}>
+            <UndoIcon fontSize="large" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+
+      <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+    </Box>
   );
 }
 
