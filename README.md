@@ -15,7 +15,7 @@ Capwise is a web application designed to help users discover movies they'll love
 
 *   **Frontend:** React, Material-UI/Bootstrap, Framer Motion
 *   **Backend:** Node.js, Express.js
-*   **Database:** MongoDB
+*   **Database:** NeDB
 *   **APIs:** Google Gemini API, The Movie Database (TMDB) API
 
 ## Getting Started

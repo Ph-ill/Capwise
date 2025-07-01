@@ -1,6 +1,6 @@
 # Capwise Frontend
 
-This is the frontend for the CineSwipe application, built with React.
+This is the frontend for the Capwise application, built with React.
 
 ## Setup
 

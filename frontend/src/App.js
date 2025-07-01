@@ -55,27 +55,26 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
     try {
       const data = await getMovieSuggestions(userId);
       if (data.movies && data.movies.length > 0) {
-        setMovies((prevMovies) => {
-          const existingMovieIds = new Set(prevMovies.map(m => m.id));
-          const uniqueNewMovies = data.movies.filter(newMovie => !existingMovieIds.has(newMovie.id));
-          return [...prevMovies, ...uniqueNewMovies];
-        });
+        setMovies(data.movies); // Replace the old batch with the new one
+        setCurrentIndex(0); // Reset to the start of the new batch
       } else {
+        setMovies([]); // Clear movies if none are returned
         console.log("No new movie suggestions.");
       }
     } catch (error) {
       console.error("Failed to fetch movies:", error);
+      setMovies([]); // Clear movies on error
     } finally {
       setLoading(false);
     }
   }, [userId]);
 
-  // Fetch initial movies or when current batch runs low
+  // Fetch initial movies
   useEffect(() => {
-    if (userId && (movies.length === 0 || currentIndex >= movies.length / 2)) {
+    if (userId) {
       fetchMovies();
     }
-  }, [userId, movies.length, currentIndex, fetchMovies]);
+  }, [userId, fetchMovies]);
 
   const currentMovie = movies[currentIndex];
 
@@ -123,9 +122,14 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
       console.error("Error recording interaction:", error);
     }
 
-    // Move to the next movie after a short delay for animation
+    // Move to the next movie and fetch more if needed
     setTimeout(() => {
-      setCurrentIndex((prevIndex) => prevIndex + 1);
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= movies.length) {
+        fetchMovies(); // Fetch a new batch when the current one is exhausted
+      } else {
+        setCurrentIndex(nextIndex);
+      }
       setExitAnimation({}); // Reset animation for next card
     }, 200); // Match with exit transition duration
   };

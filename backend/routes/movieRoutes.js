@@ -93,125 +93,109 @@ router.post('/suggest', async (req, res) => {
 
     try {
         let userProfile = await userStore.findOrCreate(userId);
-        console.log("--- Suggestion Request Debugging ---");
-        console.log("User ID:", userId);
-        console.log("User Profile Interactions Count:", userProfile.interactions.length);
-        console.log("User Profile Suggested Movies Count:", userProfile.suggestedMovies.length);
-        console.log("User Profile Suggested Movies (all):", userProfile.suggestedMovies);
-        console.log("User Profile Interacted Movie IDs (all):", userProfile.interactions.map(i => i.movieId));
+        const BATCH_SIZE = 20; // Number of suggestions to fetch at once
 
-        const newSuggestions = [];
-        const suggestedMovieIds = [];
-        const suggestedMoviesWithTitles = [];
-        // Use a Set for efficient checking of movies already added in this batch
-        const currentBatchSuggestedIds = new Set(); // Initialize as empty Set
+        // Filter out movies the user has already interacted with or that have been suggested
+        const filterSeenMovies = (movies) => {
+            const interactedMovieIds = new Set(userProfile.interactions.map(i => i.movieId));
+            const suggestedMovieIds = new Set(userProfile.suggestedMovies.map(m => m.movieId));
+            return movies.filter(movie => !interactedMovieIds.has(movie.id) && !suggestedMovieIds.has(movie.id));
+        };
 
-        // Function to fetch and filter popular movies
-        const fetchAndFilterPopularMovies = async () => {
+        // Function to fetch a batch of suggestions from popular movies
+        const fetchBatchSuggestions = async () => {
+            const suggestions = [];
             let page = 1;
-            while (newSuggestions.length < 5 && page < 20) { // Try more pages to find enough unique movies
-                const tmdbPopular = await getPopularMoviesFromTMDB(page);
-                if (tmdbPopular.length === 0) break; // No more popular movies
 
-                for (const movie of tmdbPopular) {
-                    if (newSuggestions.length >= 5) break; // Stop if we have enough unique suggestions
+            while (suggestions.length < BATCH_SIZE && page < 20) { // Increased page limit
+                const popularMovies = await getPopularMoviesFromTMDB(page);
+                if (popularMovies.length === 0) break;
 
-                    const isInteracted = userProfile.interactions.some(i => i.movieId === movie.id);
-                    const isAlreadySuggestedInDb = userProfile.suggestedMovies.some(s => s.movieId === movie.id);
-                    const isAlreadyInCurrentBatch = currentBatchSuggestedIds.has(Number(movie.id));
-
-                    if (movie.title && !isInteracted && !isAlreadySuggestedInDb && !isAlreadyInCurrentBatch) {
-                        const fullMovieDetails = await getMovieDetailsFromTMDB(movie.title); // Fetch full details for consistency
-                        if (fullMovieDetails) { // Ensure fullMovieDetails is not null
-                            newSuggestions.push(fullMovieDetails);
-                            suggestedMovieIds.push(fullMovieDetails.id);
-                            suggestedMoviesWithTitles.push({ movieId: fullMovieDetails.id, movieTitle: fullMovieDetails.title });
-                            currentBatchSuggestedIds.add(Number(fullMovieDetails.id)); // Ensure it's a Number
+                const uniqueMovies = filterSeenMovies(popularMovies);
+                
+                for (const movie of uniqueMovies) {
+                    if (suggestions.length >= BATCH_SIZE) break;
+                    
+                    const fullDetails = await getMovieDetailsFromTMDB(movie.title);
+                    if (fullDetails) {
+                        // Final check to ensure we don't add a duplicate that might have slipped through
+                        if (filterSeenMovies([fullDetails]).length > 0) {
+                            suggestions.push(fullDetails);
                         }
                     }
                 }
                 page++;
             }
+            return suggestions;
         };
 
-        // Check if enough interactions for AI suggestions
-        if (userProfile.interactions.length < INTERACTION_THRESHOLD) {
-            // Cold start: Provide popular movies
-            await fetchAndFilterPopularMovies();
-        } else {
-            // AI-powered suggestions with fallback
+        // AI-powered suggestions with fallback
+        const fetchAiSuggestions = async () => {
             try {
                 const likedGenres = Object.entries(userProfile.tasteProfile.genres)
                     .filter(([, score]) => score > 0)
-                    .sort(([, a], [, b]) => b - a)
                     .map(([genre]) => genre);
-
                 const dislikedGenres = Object.entries(userProfile.tasteProfile.genres)
                     .filter(([, score]) => score < 0)
-                    .sort(([, a], [, b]) => a - b)
                     .map(([genre]) => genre);
 
-                // Get titles of interacted and suggested movies for the prompt
-                const interactedMovieTitles = userProfile.interactions.map(i => i.movieDetails ? i.movieDetails.title : '').filter(Boolean);
-                const suggestedMovieTitles = userProfile.suggestedMovies.map(s => s.movieTitle).filter(Boolean);
+                const excludedTitles = [
+                    ...new Set([
+                        ...userProfile.interactions.map(i => i.movieDetails.title),
+                        ...userProfile.suggestedMovies.map(s => s.movieTitle)
+                    ])
+                ];
 
-                const excludedTitles = [...new Set([...interactedMovieTitles, ...suggestedMovieTitles])];
-
-                let prompt = `Suggest 20 movies.`;
-
-                if (likedGenres.length > 0) {
-                    prompt += ` The user likes movies in genres such as ${likedGenres.join(', ')}.`;
-                }
-                if (dislikedGenres.length > 0) {
-                    prompt += ` The user dislikes movies in genres such as ${dislikedGenres.join(', ')}.`;
-                }
-                if (excludedTitles.length > 0) {
-                    prompt += ` DO NOT suggest any of the following movies: ${excludedTitles.join(', ')}.`;
-                }
-
+                let prompt = `Suggest ${BATCH_SIZE} movies.`;
+                if (likedGenres.length > 0) prompt += ` The user likes movies in genres such as ${likedGenres.join(', ')}.`;
+                if (dislikedGenres.length > 0) prompt += ` The user dislikes movies in genres such as ${dislikedGenres.join(', ')}.`;
+                if (excludedTitles.length > 0) prompt += ` Do not suggest any of the following movies: ${excludedTitles.join(', ')}.`;
                 prompt += ` Provide only the movie titles, one per line.`;
-                console.log("Excluded Titles sent to Gemini:", excludedTitles);
 
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
                 const text = response.text();
-                const suggestedTitles = text.split('\n').map(title => title.trim()).filter(title => title.length > 0);
+                const titles = text.split('\n').map(t => t.trim()).filter(Boolean);
 
-                for (const title of suggestedTitles) {
-                    if (newSuggestions.length >= 5) break; // Stop if we have enough unique suggestions
+                const moviePromises = titles.map(title => getMovieDetailsFromTMDB(title));
+                let movies = (await Promise.all(moviePromises)).filter(Boolean);
+                
+                // Filter out seen movies from AI suggestions
+                movies = filterSeenMovies(movies);
 
-                    const movieDetails = await getMovieDetailsFromTMDB(title);
-                    if (movieDetails) {
-                        const isInteracted = userProfile.interactions.some(i => i.movieId === movieDetails.id);
-                        const isAlreadySuggestedInDb = userProfile.suggestedMovies.some(s => s.movieId === movieDetails.id);
-                        const isAlreadyInCurrentBatch = currentBatchSuggestedIds.has(Number(movieDetails.id));
-
-                        if (!isInteracted && !isAlreadySuggestedInDb && !isAlreadyInCurrentBatch) {
-                            newSuggestions.push(movieDetails);
-                            suggestedMovieIds.push(movieDetails.id);
-                            suggestedMoviesWithTitles.push({ movieId: movieDetails.id, movieTitle: movieDetails.title });
-                            currentBatchSuggestedIds.add(Number(movieDetails.id)); // Ensure it's a Number
+                // If AI gives fewer unique suggestions than needed, top up with popular ones
+                if (movies.length < BATCH_SIZE) {
+                    const popularFallback = await fetchBatchSuggestions();
+                    const combined = [...movies, ...popularFallback];
+                    const movieIds = new Set();
+                    // Ensure final list is unique
+                    movies = combined.filter(movie => {
+                        if (movieIds.has(movie.id)) {
+                            return false;
                         }
-                    }
+                        movieIds.add(movie.id);
+                        return true;
+                    }).slice(0, BATCH_SIZE);
                 }
-            } catch (geminiError) {
-                console.error('Error calling Gemini API, falling back to popular movies:', geminiError);
-                await fetchAndFilterPopularMovies(); // Fallback
+                
+                return movies;
+
+            } catch (error) {
+                console.error('Error with Gemini API, falling back to popular movies:', error);
+                return await fetchBatchSuggestions();
             }
+        };
+
+        const suggestions = userProfile.interactions.length < INTERACTION_THRESHOLD
+            ? await fetchBatchSuggestions()
+            : await fetchAiSuggestions();
+
+        if (suggestions.length > 0) {
+            const newSuggestedMovies = suggestions.map(m => ({ movieId: m.id, movieTitle: m.title }));
+            await userStore.updateSuggestedMovies(userId, [...userProfile.suggestedMovies, ...newSuggestedMovies]);
         }
 
-        if (suggestedMoviesWithTitles.length > 0) {
-            // Combine existing suggested movies with new suggestions
-            const allSuggestedMovies = [...userProfile.suggestedMovies, ...suggestedMoviesWithTitles];
-            await userStore.updateSuggestedMovies(userId, allSuggestedMovies);
-            // Re-fetch the user profile to ensure it's up-to-date after the update
-            userProfile = await userStore.getUserProfile(userId);
-            console.log("User profile after re-fetch (suggestedMovies):");
-            console.log(userProfile.suggestedMovies);
-            console.log("Updated suggestedMovies for user:", userId, "with IDs:", suggestedMovieIds);
-        }
-
-        res.json({ movies: newSuggestions });
+        res.json({ movies: suggestions });
 
     } catch (error) {
         console.error('Error getting movie suggestions:', error);

@@ -31,6 +31,8 @@ This backend uses [NeDB](https://github.com/louischatriand/nedb), a lightweight 
 ## API Endpoints (To be implemented)
 
 *   `POST /api/movies/suggest`: Get movie suggestions based on user preferences.
-*   `POST /api/users/interact`: Record user interactions (like, dislike, watchlist, not interested).
-*   `GET /api/users/profile`: Get user's taste profile data.
-*   `GET /api/movies/watchlist`: Get user's watchlist.
+*   `POST /api/movies/interact`: Record user interactions (like, dislike, watchlist, not interested).
+*   `GET /api/users/profile/:userId`: Get user's taste profile data.
+*   `GET /api/users/watchlist/:userId`: Get user's watchlist.
+*   `POST /api/users/undo-last-interaction`: Undo the last user interaction.
+*   `POST /api/users/reset-profile`: Reset a user's profile.
