@@ -11,6 +11,20 @@ import HotkeyModal from './components/HotkeyModal'; // Import the HotkeyModal co
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { themes } from './themes'; // Import the themes
+import MatrixEffect from './components/MatrixEffect';
+import BubbleEffect from './components/BubbleEffect';
+import StarfieldEffect from './components/StarfieldEffect';
+import BreakingBadEffect from './components/BreakingBadEffect';
+import GlitchEffect from './components/GlitchEffect';
+import VHSEffect from './components/VHSEffect';
+import RainbowEffect from './components/RainbowEffect';
+import PusheenEffect from './components/PusheenEffect';
+import VHSErrorEffect from './components/VHSErrorEffect';
+import GridEffect from './components/GridEffect';
+import NeonRainEffect from './components/NeonRainEffect';
+import WormholeEffect from './components/WormholeEffect';
+import RuneEffect from './components/RuneEffect';
+import FoldingEffect from './components/FoldingEffect';
 import { MovieContext, MovieProvider } from './context/MovieContext'; // Import MovieContext and MovieProvider
 import { NotificationProvider } from './notifications/NotificationContext';
 import Notification from './notifications/Notification';
@@ -222,7 +236,9 @@ function App() {
   const [hotkeyModalOpen, setHotkeyModalOpen] = useState(false);
   const [currentThemeIndex, setCurrentThemeIndex] = useState(() => {
     const storedThemeIndex = localStorage.getItem('selectedThemeIndex');
-    return storedThemeIndex ? parseInt(storedThemeIndex, 10) : 0;
+    const parsedIndex = storedThemeIndex ? parseInt(storedThemeIndex, 10) : 0;
+    // Ensure the stored index is within the bounds of the themes array
+    return (parsedIndex >= 0 && parsedIndex < themes.length) ? parsedIndex : 0;
   });
 
   const handleOpenHotkeyModal = () => setHotkeyModalOpen(true);
@@ -241,7 +257,21 @@ function App() {
       <Router>
         <NotificationProvider>
           <Box sx={{ background: activeTheme.backgroundGradient, minHeight: '100vh' }}>
-          <AppBar position="static" sx={{ background: activeTheme.appBarGradient }}>
+            {activeTheme.name === 'The Matrix' && <MatrixEffect />}
+            {activeTheme.name === 'Spongebob' && <BubbleEffect />}
+            {activeTheme.name === 'Star Wars' && <StarfieldEffect />}
+            {activeTheme.name === 'Breaking Bad' && <BreakingBadEffect />}
+            {activeTheme.name === 'The Grudge' && <GlitchEffect />}
+            {activeTheme.name === 'The Ring' && <VHSErrorEffect />}
+            {activeTheme.name === 'VHS' && <VHSEffect />}
+            {activeTheme.name === 'Rainbow Dash' && <RainbowEffect />}
+            {activeTheme.name === 'Pusheen' && <PusheenEffect />}
+            {activeTheme.name === 'Tron' && <GridEffect />}
+            {activeTheme.name === 'Blade Runner' && <NeonRainEffect />}
+            {activeTheme.name === 'Interstellar' && <WormholeEffect />}
+            {activeTheme.name === 'The Lord of the Rings' && <RuneEffect />}
+            {activeTheme.name === 'Inception' && <FoldingEffect />}
+            <AppBar position="static" sx={{ background: activeTheme.appBarGradient }}>
             <Toolbar>
               <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1.5, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
                 Capwise
