@@ -26,11 +26,11 @@ router.post('/undo-last-interaction', async (req, res) => {
     }
 
     try {
-        const numReplaced = await userStore.undoLastInteraction(userId);
-        if (numReplaced > 0) {
-            res.status(200).json({ message: 'Last interaction undone successfully' });
+        const result = await userStore.undoLastInteraction(userId);
+        if (result.undone) {
+            res.status(200).json({ message: 'Last interaction undone successfully', movieDetails: result.movieDetails });
         } else {
-            res.status(404).json({ message: 'No interactions to undo' });
+            res.status(404).json({ message: result.message || 'No interactions to undo' });
         }
     } catch (error) {
         console.error('Error undoing last interaction:', error);

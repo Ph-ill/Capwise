@@ -12,6 +12,10 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
 const INTERACTION_THRESHOLD = 0; // Number of interactions before AI suggestions kick in
 
+// In-memory cache and lock for pre-fetching suggestions
+const suggestionCache = new Map();
+const prefetchLock = new Map(); // Stores promises for ongoing fetches
+
 // Helper to fetch movie details from TMDB by title
 const getMovieDetailsFromTMDB = async (movieTitle) => {
     try {
@@ -23,16 +27,13 @@ const getMovieDetailsFromTMDB = async (movieTitle) => {
             const movieDetailsResponse = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}`);
             const movieDetails = await movieDetailsResponse.json();
 
-            // Extract director, writers, actors
             const creditsResponse = await fetch(`${TMDB_BASE_URL}/movie/${movieId}/credits?api_key=${TMDB_API_KEY}`);
             const creditsData = await creditsResponse.json();
 
-            const director = creditsData.crew.find(person => person.job === 'Director');
-            const writers = creditsData.crew.filter(person => person.department === 'Writing');
-            const actors = creditsData.cast.slice(0, 5); // Top 5 actors
+            const director = creditsData.crew ? creditsData.crew.find(person => person.job === 'Director') : null;
+            const writers = creditsData.crew ? creditsData.crew.filter(person => person.department === 'Writing') : [];
+            const actors = creditsData.cast ? creditsData.cast.slice(0, 5) : [];
 
-            const imdbId = movieDetails.imdb_id || null;
-            console.log(`Fetched IMDb ID for ${movieDetails.title}: ${imdbId}`);
             return {
                 id: Number(movieDetails.id),
                 title: movieDetails.title,
@@ -43,23 +44,24 @@ const getMovieDetailsFromTMDB = async (movieTitle) => {
                 director: director ? director.name : null,
                 writers: writers.map(w => w.name),
                 actors: actors.map(a => a.name),
-                imdbId: imdbId,
+                imdbId: movieDetails.imdb_id || null,
+                voteAverage: movieDetails.vote_average ? movieDetails.vote_average.toFixed(1) : 'N/A', // Add TMDB vote average
             };
         }
     } catch (error) {
-        console.error("Error fetching movie details from TMDB:", error);
+        console.error(`Error fetching details for ${movieTitle}:`, error);
     }
     return null;
 };
 
 // Helper to fetch popular movies from TMDB
-const getPopularMoviesFromTMDB = async (page = 1) => {
+const getMoviesFromTMDB = async (type = 'popular', page = 1) => {
     try {
-        const response = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&page=${page}`);
+        const response = await fetch(`${TMDB_BASE_URL}/movie/${type}?api_key=${TMDB_API_KEY}&page=${page}`);
         const data = await response.json();
         return data.results ? data.results.map(movie => ({ ...movie, id: Number(movie.id) })) : [];
     } catch (error) {
-        console.error("Error fetching popular movies from TMDB:", error);
+        console.error(`Error fetching ${type} movies from TMDB:`, error);
         return [];
     }
 };
@@ -82,7 +84,214 @@ router.post('/interact', async (req, res) => {
     }
 });
 
-// Endpoint to get movie suggestions
+// Main function to robustly fetch a batch of suggestions
+const fetchSuggestionBatch = async (userProfile) => {
+    const BATCH_SIZE = 40;
+    const seenMovieIds = new Set(userProfile.suggestedMovies.map(m => m.movieId).concat(userProfile.interactions.map(i => i.movieId)));
+    console.log(`[fetchSuggestionBatch] Initial seenMovieIds count: ${seenMovieIds.size}`);
+
+    const fetchFallbackMovies = async (seenMovieIds, excludeRecent = false) => {
+    const uniqueFallbackSuggestions = [];
+    const movieTypes = ['popular', 'top_rated', 'upcoming'];
+    const MAX_PAGES_PER_TYPE = 50; // Increased search depth
+
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    for (const type of movieTypes) {
+        let page = 1;
+        while (uniqueFallbackSuggestions.length < BATCH_SIZE && page <= MAX_PAGES_PER_TYPE) {
+            const movies = await getMoviesFromTMDB(type, page++);
+            if (!movies || movies.length === 0) break;
+
+            const detailedPromises = movies.map(m => getMovieDetailsFromTMDB(m.title));
+            const detailedMovies = (await Promise.all(detailedPromises)).filter(Boolean);
+
+            for (const movie of detailedMovies) {
+                if (uniqueFallbackSuggestions.length >= BATCH_SIZE) break;
+                if (!seenMovieIds.has(movie.id)) { // Only add if not already seen
+                    if (excludeRecent) {
+                        const releaseDate = movie.release_date ? new Date(movie.release_date) : null;
+                        if (releaseDate && releaseDate > sixMonthsAgo) {
+                            console.log(`[fetchFallbackMovies] Skipping recent movie (initial batch): ${movie.title} (Released: ${movie.release_date})`);
+                            continue; // Skip this movie if it's too recent
+                        }
+                    }
+                    uniqueFallbackSuggestions.push(movie);
+                    console.log(`[fetchFallbackMovies] Adding unique movie: ${movie.title} (ID: ${movie.id})`);
+                } else {
+                    console.log(`[fetchFallbackMovies] Skipping seen movie: ${movie.title} (ID: ${movie.id})`);
+                }
+            }
+        }
+        if (uniqueFallbackSuggestions.length >= BATCH_SIZE) break; // Stop if we have enough movies
+    }
+    console.log(`[fetchFallbackMovies] Found ${uniqueFallbackSuggestions.length} unique and unseen movies from fallback sources.`);
+    return uniqueFallbackSuggestions;
+};
+
+    const fetchAI = async () => {
+        try {
+            const likedMovies = userProfile.interactions.filter(i => i.type === 'like').map(i => i.movieDetails.title);
+            const strongLikedMovies = userProfile.interactions.filter(i => i.type === 'strong_like').map(i => i.movieDetails.title);
+            const dislikedMovies = userProfile.interactions.filter(i => i.type === 'dislike').map(i => i.movieDetails.title);
+            const strongDislikedMovies = userProfile.interactions.filter(i => i.type === 'strong_dislike').map(i => i.movieDetails.title);
+            const excludedTitles = [...new Set(userProfile.suggestedMovies.map(m => m.movieTitle))];
+
+            let prompt = `Suggest ${BATCH_SIZE * 3} movies. Use the following films to understand my taste, but do not suggest any of them again.`; // Fetch more to allow for filtering
+            if (strongLikedMovies.length > 0) prompt += ` These are films I really liked: ${strongLikedMovies.join(', ')}.`;
+            if (likedMovies.length > 0) prompt += ` These are films I liked: ${likedMovies.join(', ')}.`;
+            if (strongDislikedMovies.length > 0) prompt += ` These are films I hate: ${strongDislikedMovies.join(', ')}.`;
+            if (dislikedMovies.length > 0) prompt += ` These are films I dislike: ${dislikedMovies.join(', ')}.`;
+            if (excludedTitles.length > 0) prompt += ` Also, do not suggest these titles: ${excludedTitles.join(', ')}.`;
+            prompt += ` Provide only movie titles, one per line.`;
+
+            console.log(`[fetchAI] Sending prompt to Gemini: ${prompt}`);
+            const result = await model.generateContent(prompt);
+            const titles = result.response.text().split('\n').filter(Boolean);
+            console.log(`[fetchAI] Gemini returned ${titles.length} titles.`);
+
+            const moviePromises = titles.map(getMovieDetailsFromTMDB);
+            const allFetched = (await Promise.all(moviePromises)).filter(Boolean);
+            console.log(`[fetchAI] Successfully fetched details for ${allFetched.length} movies from TMDB based on Gemini titles.`);
+
+            const suggestions = [];
+            for (const movie of allFetched) {
+                if (suggestions.length >= BATCH_SIZE) break;
+                if (!seenMovieIds.has(movie.id)) {
+                    suggestions.push(movie);
+                    seenMovieIds.add(movie.id);
+                }
+            }
+            console.log(`[fetchAI] Found ${suggestions.length} unique and unseen movies from AI suggestions.`);
+
+            // Fallback if AI gives too few new suggestions
+            if (suggestions.length < BATCH_SIZE) {
+                console.log(`[fetchAI] AI suggestions insufficient (${suggestions.length}/${BATCH_SIZE}), falling back to popular movies.`);
+                const fallbackMovies = await fetchFallbackMovies(seenMovieIds);
+                for (const movie of fallbackMovies) {
+                    if (suggestions.length >= BATCH_SIZE) break;
+                    suggestions.push(movie);
+                    seenMovieIds.add(movie.id); // Add to seen set
+                }
+                console.log(`[fetchAI] After initial fallback, total suggestions: ${suggestions.length}`);
+
+                // If still not enough, fill with duplicates from fallbackMovies
+                let fallbackIndex = 0;
+                while (suggestions.length < BATCH_SIZE && fallbackMovies.length > 0) {
+                    suggestions.push(fallbackMovies[fallbackIndex % fallbackMovies.length]);
+                    fallbackIndex++;
+                }
+                console.log(`[fetchAI] After filling with duplicates, total suggestions: ${suggestions.length}`);
+            }
+            return suggestions;
+        } catch (e) {
+            console.error('[fetchAI] AI fetch failed, falling back to popular movies:', e);
+            const fallbackMovies = await fetchFallbackMovies(seenMovieIds);
+            for (const movie of fallbackMovies) {
+                if (suggestions.length >= BATCH_SIZE) break;
+                suggestions.push(movie);
+                seenMovieIds.add(movie.id); // Add to seen set
+            }
+            // If still not enough, fill with duplicates from fallbackMovies
+            let fallbackIndex = 0;
+            while (suggestions.length < BATCH_SIZE && fallbackMovies.length > 0) {
+                suggestions.push(fallbackMovies[fallbackIndex % fallbackMovies.length]);
+                fallbackIndex++;
+            }
+            return suggestions;
+        }
+    };
+
+    const initialSuggestions = userProfile.interactions.length < INTERACTION_THRESHOLD ? await fetchFallbackMovies(seenMovieIds, true) : await fetchAI();
+
+    // Ensure initialSuggestions always has BATCH_SIZE movies
+    let finalSuggestions = [...initialSuggestions];
+    let fallbackIndex = 0;
+    while (finalSuggestions.length < BATCH_SIZE && initialSuggestions.length > 0) {
+        finalSuggestions.push(initialSuggestions[fallbackIndex % initialSuggestions.length]);
+        fallbackIndex++;
+    }
+    console.log(`[fetchSuggestionBatch] Final batch size: ${finalSuggestions.length}`);
+    return finalSuggestions;
+};
+
+// Function to manage pre-fetching movies and caching
+const getMoviesForUser = async (userId, userStore) => {
+    // If a fetch is already in progress for this user, wait for it to complete.
+    if (prefetchLock.has(userId)) {
+        console.log(`Request for ${userId} is waiting for an ongoing prefetch...`);
+        return prefetchLock.get(userId);
+    }
+
+    // Check the cache for ready-to-serve suggestions.
+    if (suggestionCache.has(userId)) {
+        const suggestions = suggestionCache.get(userId);
+        suggestionCache.delete(userId);
+        console.log(`Serving ${suggestions.length} movies from cache for ${userId}.`);
+        
+        // Get the current user profile to get the *already suggested* movies
+        const userProfile = await userStore.getUserProfile(userId);
+
+        // Update the user's suggestedMovies in the DB with the *newly served* movies
+        const newSuggestedMovies = suggestions.map(m => ({ movieId: m.id, movieTitle: m.title }));
+        const updatedSuggestedMoviesList = [...userProfile.suggestedMovies, ...newSuggestedMovies];
+        await userStore.updateSuggestedMovies(userId, updatedSuggestedMoviesList);
+
+        // Create a profile for the *next* prefetch that includes all suggested movies so far
+        const profileForNextPrefetch = { ...userProfile, suggestedMovies: updatedSuggestedMoviesList };
+
+        // Asynchronously pre-fetch the next batch using the updated profile
+        const prefetchPromise = fetchSuggestionBatch(profileForNextPrefetch);
+        prefetchLock.set(userId, prefetchPromise);
+
+        prefetchPromise.then(nextBatch => {
+            suggestionCache.set(userId, nextBatch);
+            console.log(`Successfully pre-fetched ${nextBatch.length} movies for ${userId}.`);
+        }).catch(err => {
+            console.error(`Prefetch failed for ${userId}:`, err);
+        }).finally(() => {
+            prefetchLock.delete(userId);
+        });
+
+        return suggestions;
+    }
+
+    // If cache is empty and no fetch is in progress, fetch a new batch now.
+    console.log(`Cache miss for ${userId}. Fetching a new batch...`);
+    const userProfile = await userStore.findOrCreate(userId);
+
+    const fetchPromise = fetchSuggestionBatch(userProfile);
+    prefetchLock.set(userId, fetchPromise);
+
+    const suggestions = await fetchPromise;
+    console.log(`Fetched ${suggestions.length} movies for ${userId}.`);
+    
+    // Update user profile with the newly fetched suggestions
+    const newSuggestedMovies = suggestions.map(m => ({ movieId: m.id, movieTitle: m.title }));
+    const updatedSuggestedMoviesList = [...userProfile.suggestedMovies, ...newSuggestedMovies];
+    await userStore.updateSuggestedMovies(userId, updatedSuggestedMoviesList);
+
+    prefetchLock.delete(userId);
+
+    // Trigger the next prefetch immediately after the current batch is served and saved
+    const profileForNextPrefetch = { ...userProfile, suggestedMovies: updatedSuggestedMoviesList };
+    const nextPrefetchPromise = fetchSuggestionBatch(profileForNextPrefetch);
+    prefetchLock.set(userId, nextPrefetchPromise);
+
+    nextPrefetchPromise.then(nextBatch => {
+        suggestionCache.set(userId, nextBatch);
+        console.log(`Successfully pre-fetched ${nextBatch.length} movies for ${userId} into cache.`);
+    }).catch(err => {
+        console.error(`Prefetch failed for ${userId}:`, err);
+    }).finally(() => {
+        prefetchLock.delete(userId);
+    });
+
+    return suggestions;
+};
+
+
 router.post('/suggest', async (req, res) => {
     const { userId } = req.body;
     const userStore = req.db.userStore;
@@ -92,113 +301,11 @@ router.post('/suggest', async (req, res) => {
     }
 
     try {
-        let userProfile = await userStore.findOrCreate(userId);
-        const BATCH_SIZE = 20; // Number of suggestions to fetch at once
-
-        // Filter out movies the user has already interacted with or that have been suggested
-        const filterSeenMovies = (movies) => {
-            const interactedMovieIds = new Set(userProfile.interactions.map(i => i.movieId));
-            const suggestedMovieIds = new Set(userProfile.suggestedMovies.map(m => m.movieId));
-            return movies.filter(movie => !interactedMovieIds.has(movie.id) && !suggestedMovieIds.has(movie.id));
-        };
-
-        // Function to fetch a batch of suggestions from popular movies
-        const fetchBatchSuggestions = async () => {
-            const suggestions = [];
-            let page = 1;
-
-            while (suggestions.length < BATCH_SIZE && page < 20) { // Increased page limit
-                const popularMovies = await getPopularMoviesFromTMDB(page);
-                if (popularMovies.length === 0) break;
-
-                const uniqueMovies = filterSeenMovies(popularMovies);
-                
-                for (const movie of uniqueMovies) {
-                    if (suggestions.length >= BATCH_SIZE) break;
-                    
-                    const fullDetails = await getMovieDetailsFromTMDB(movie.title);
-                    if (fullDetails) {
-                        // Final check to ensure we don't add a duplicate that might have slipped through
-                        if (filterSeenMovies([fullDetails]).length > 0) {
-                            suggestions.push(fullDetails);
-                        }
-                    }
-                }
-                page++;
-            }
-            return suggestions;
-        };
-
-        // AI-powered suggestions with fallback
-        const fetchAiSuggestions = async () => {
-            try {
-                const likedGenres = Object.entries(userProfile.tasteProfile.genres)
-                    .filter(([, score]) => score > 0)
-                    .map(([genre]) => genre);
-                const dislikedGenres = Object.entries(userProfile.tasteProfile.genres)
-                    .filter(([, score]) => score < 0)
-                    .map(([genre]) => genre);
-
-                const excludedTitles = [
-                    ...new Set([
-                        ...userProfile.interactions.map(i => i.movieDetails.title),
-                        ...userProfile.suggestedMovies.map(s => s.movieTitle)
-                    ])
-                ];
-
-                let prompt = `Suggest ${BATCH_SIZE} movies.`;
-                if (likedGenres.length > 0) prompt += ` The user likes movies in genres such as ${likedGenres.join(', ')}.`;
-                if (dislikedGenres.length > 0) prompt += ` The user dislikes movies in genres such as ${dislikedGenres.join(', ')}.`;
-                if (excludedTitles.length > 0) prompt += ` Do not suggest any of the following movies: ${excludedTitles.join(', ')}.`;
-                prompt += ` Provide only the movie titles, one per line.`;
-
-                const result = await model.generateContent(prompt);
-                const response = await result.response;
-                const text = response.text();
-                const titles = text.split('\n').map(t => t.trim()).filter(Boolean);
-
-                const moviePromises = titles.map(title => getMovieDetailsFromTMDB(title));
-                let movies = (await Promise.all(moviePromises)).filter(Boolean);
-                
-                // Filter out seen movies from AI suggestions
-                movies = filterSeenMovies(movies);
-
-                // If AI gives fewer unique suggestions than needed, top up with popular ones
-                if (movies.length < BATCH_SIZE) {
-                    const popularFallback = await fetchBatchSuggestions();
-                    const combined = [...movies, ...popularFallback];
-                    const movieIds = new Set();
-                    // Ensure final list is unique
-                    movies = combined.filter(movie => {
-                        if (movieIds.has(movie.id)) {
-                            return false;
-                        }
-                        movieIds.add(movie.id);
-                        return true;
-                    }).slice(0, BATCH_SIZE);
-                }
-                
-                return movies;
-
-            } catch (error) {
-                console.error('Error with Gemini API, falling back to popular movies:', error);
-                return await fetchBatchSuggestions();
-            }
-        };
-
-        const suggestions = userProfile.interactions.length < INTERACTION_THRESHOLD
-            ? await fetchBatchSuggestions()
-            : await fetchAiSuggestions();
-
-        if (suggestions.length > 0) {
-            const newSuggestedMovies = suggestions.map(m => ({ movieId: m.id, movieTitle: m.title }));
-            await userStore.updateSuggestedMovies(userId, [...userProfile.suggestedMovies, ...newSuggestedMovies]);
-        }
-
-        res.json({ movies: suggestions });
-
+        const movies = await getMoviesForUser(userId, userStore);
+        res.json({ movies });
     } catch (error) {
-        console.error('Error getting movie suggestions:', error);
+        console.error(`Failed to get suggestions for ${userId}:`, error);
+        prefetchLock.delete(userId); // Ensure lock is released on error
         res.status(500).json({ error: 'Failed to get movie suggestions' });
     }
 });

@@ -30,10 +30,12 @@ app.use((req, res, next) => {
 // Import routes
 const movieRoutes = require('./routes/movieRoutes');
 const userRoutes = require('./routes/userRoutes');
+const radarrRoutes = require('./routes/radarrRoutes');
 
 // Use routes
 app.use('/api/movies', movieRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/radarr', radarrRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

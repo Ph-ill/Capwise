@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Typography, Box, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Container, Typography, Box, Button, FormControl, InputLabel, Select, MenuItem, TextField } from '@mui/material';
 import { themes } from '../themes';
 import { useTheme } from '@mui/material/styles';
 
 function Settings({ setThemeIndex, currentThemeIndex }) {
   const theme = useTheme();
   const [userId, setUserId] = useState(null);
+  const [radarrUrl, setRadarrUrl] = useState('');
+  const [radarrApiKey, setRadarrApiKey] = useState('');
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('cineswipeUserId');
-
     if (storedUserId) setUserId(storedUserId);
+
+    setRadarrUrl(localStorage.getItem('radarrUrl') || '');
+    setRadarrApiKey(localStorage.getItem('radarrApiKey') || '');
   }, []);
 
-  const handleSaveApiKeys = () => {
-    localStorage.setItem('geminiApiKey', geminiApiKey);
-    localStorage.setItem('tmdbApiKey', tmdbApiKey);
-    alert('API Keys saved!');
+  const handleSaveRadarrSettings = () => {
+    localStorage.setItem('radarrUrl', radarrUrl);
+    localStorage.setItem('radarrApiKey', radarrApiKey);
+    alert('Radarr settings saved successfully!');
   };
 
   const handleResetProfile = async () => {
@@ -73,6 +77,31 @@ function Settings({ setThemeIndex, currentThemeIndex }) {
               <li>5. Restart your backend server for the changes to take effect.</li>
             </Typography>
           </Box>
+        </Box>
+
+        <Box sx={{ width: '100%', mt: 5 }}>
+          <Typography variant="h5" component="h2" gutterBottom>
+            Radarr Integration
+          </Typography>
+          <TextField
+            label="Radarr URL (e.g., http://localhost:7878)"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={radarrUrl}
+            onChange={(e) => setRadarrUrl(e.target.value)}
+          />
+          <TextField
+            label="Radarr API Key"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={radarrApiKey}
+            onChange={(e) => setRadarrApiKey(e.target.value)}
+          />
+          <Button variant="contained" color="primary" onClick={handleSaveRadarrSettings} sx={{ mt: 2 }}>
+            Save Radarr Settings
+          </Button>
         </Box>
 
         <Box sx={{ width: '100%', mt: 5 }}>

@@ -9,7 +9,7 @@ import Settings from './pages/Settings';
 import Infographic from './pages/Infographic';
 import Watchlist from './pages/Watchlist'; // Import the Watchlist component
 import HotkeyModal from './components/HotkeyModal'; // Import the HotkeyModal component
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { themes } from './themes'; // Import the themes
 
@@ -22,7 +22,7 @@ const undoLastInteraction = async (userId) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON_stringify({ userId }),
+      body: JSON.stringify({ userId }),
     });
     return await response.json();
   } catch (error) {
@@ -37,6 +37,8 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
   const [exitAnimation, setExitAnimation] = useState({});
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // New state for initial load
+  const [initialFetchDone, setInitialFetchDone] = useState(false); // New state to track initial fetch
 
   // Initialize userId from localStorage or generate a new one
   useEffect(() => {
@@ -55,30 +57,35 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
     try {
       const data = await getMovieSuggestions(userId);
       if (data.movies && data.movies.length > 0) {
-        setMovies(data.movies); // Replace the old batch with the new one
-        setCurrentIndex(0); // Reset to the start of the new batch
+        setMovies(data.movies);
+        setCurrentIndex(0);
       } else {
-        setMovies([]); // Clear movies if none are returned
+        setMovies([]);
         console.log("No new movie suggestions.");
       }
     } catch (error) {
       console.error("Failed to fetch movies:", error);
-      setMovies([]); // Clear movies on error
+      setMovies([]);
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId]); // Removed isInitialLoad from dependencies
 
   // Fetch initial movies
   useEffect(() => {
-    if (userId) {
-      fetchMovies();
+    if (userId && !initialFetchDone) {
+      const performInitialFetch = async () => {
+        await fetchMovies();
+        setInitialFetchDone(true); // Mark initial fetch as done
+        setIsInitialLoad(false); // Set initial load flag to false after the first fetch completes
+      };
+      performInitialFetch();
     }
-  }, [userId, fetchMovies]);
+  }, [userId, fetchMovies, initialFetchDone]);
 
   const currentMovie = movies[currentIndex];
 
-  const handleInteraction = async (action) => {
+  const handleInteraction = useCallback(async (action) => {
     if (!currentMovie || !userId) return;
 
     let animationProps = {};
@@ -132,28 +139,32 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
       }
       setExitAnimation({}); // Reset animation for next card
     }, 200); // Match with exit transition duration
-  };
+  }, [currentIndex, currentMovie, fetchMovies, movies.length, userId]);
 
-  const handleUndo = async () => {
+  const handleUndo = useCallback(async () => {
     if (!userId) return;
 
     try {
-      const response = await undoLastInteraction(userId);
-      if (response.message === 'Last interaction undone successfully') {
-        console.log('Last interaction undone.');
-        // Decrement currentIndex to go back to the previous movie
-        setCurrentIndex((prevIndex) => Math.max(0, prevIndex - 1));
-        // Optionally, re-fetch movies to ensure the list is up-to-date after undo
-        // fetchMovies();
-      } else if (response.message === 'No interactions to undo') {
-        console.log('No interactions to undo.');
-      } else {
-        console.error('Failed to undo interaction:', response.error);
-      }
+        const response = await undoLastInteraction(userId);
+
+        if (response.message === 'Last interaction undone successfully' && response.movieDetails) {
+            console.log('Last interaction undone. Restoring movie:', response.movieDetails.title);
+
+            // Re-insert the undone movie at the current position in the array.
+            // This places it back on top of the stack for the user to interact with again.
+            setMovies(prevMovies => {
+                const newMovies = [...prevMovies];
+                newMovies.splice(currentIndex, 0, response.movieDetails);
+                return newMovies;
+            });
+
+        } else {
+            console.error('Failed to undo interaction:', response.message || 'No movie details returned.');
+        }
     } catch (error) {
-      console.error('Error during undo operation:', error);
+        console.error('Error during undo operation:', error);
     }
-  };
+  }, [currentIndex, userId]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -202,9 +213,11 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
   if (loading) {
     return (
       <Container maxWidth="sm">
-        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
           <CircularProgress />
-          <Typography variant="h6" sx={{ mt: 2 }}>Loading movies...</Typography>
+          <Typography variant="h6" sx={{ mt: 2, textAlign: 'center' }}>
+            {isInitialLoad ? <>Setting up your personalized movie experience<br />(this may take 1-3 minutes for the initial load, subsequent loads will be shorter)...</> : "Loading more movies..."}
+          </Typography>
         </Box>
       </Container>
     );
@@ -213,11 +226,8 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
   if (!currentMovie && !loading) {
     return (
       <Container maxWidth="sm">
-        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Capwise
-          </Typography>
-          <Typography variant="h6">No more movies to suggest! Try refreshing or check your API keys.</Typography>
+        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+          <Typography variant="h6" sx={{ textAlign: 'center' }}>No more movies to suggest! Try refreshing or check your API keys.</Typography>
         </Box>
       </Container>
     );
@@ -226,9 +236,7 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
   return (
     <Container maxWidth="lg">
       <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Capwise
-        </Typography>
+        
 
         <Box sx={{ position: 'relative', width: '90vw', maxWidth: 900, height: '70vh', maxHeight: 600, mb: 2 }}>
           <AnimatePresence initial={false}>
@@ -349,4 +357,3 @@ function App() {
 }
 
 export default App;
-

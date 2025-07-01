@@ -60,22 +60,24 @@ class UserStore {
         return new Promise((resolve, reject) => {
             this.db.findOne({ userId }, (err, user) => {
                 if (err) return reject(err);
-                if (!user) return reject(new Error('User not found'));
-                if (user.interactions.length === 0) return resolve(0); // Nothing to undo
+                if (!user || user.interactions.length === 0) {
+                    return resolve({ undone: false, message: 'No interactions to undo.' });
+                }
 
-                // Remove the last interaction
-                user.interactions.pop();
-
-                // Recalculate taste profile from scratch for accuracy
+                const lastInteraction = user.interactions.pop();
                 user.tasteProfile = this._recalculateTasteProfile(user.interactions);
 
                 this.db.update(
                     { userId },
                     { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile } },
-                    { upsert: true },
+                    {},
                     (err, numReplaced) => {
                         if (err) return reject(err);
-                        resolve(numReplaced);
+                        if (numReplaced > 0) {
+                            resolve({ undone: true, movieDetails: lastInteraction.movieDetails });
+                        } else {
+                            resolve({ undone: false, message: 'Failed to undo interaction.' });
+                        }
                     }
                 );
             });
@@ -153,11 +155,11 @@ class UserStore {
         return newTasteProfile;
     }
 
-    async updateSuggestedMovies(userId, suggestedMoviesWithTitles) {
+    async updateSuggestedMovies(userId, suggestedMovies) {
         return new Promise((resolve, reject) => {
             this.db.update(
                 { userId },
-                { $addToSet: { suggestedMovies: { $each: suggestedMoviesWithTitles } } },
+                { $set: { suggestedMovies: suggestedMovies } },
                 { upsert: true },
                 (err, numReplaced) => {
                     if (err) return reject(err);
