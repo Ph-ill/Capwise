@@ -1,110 +1,110 @@
-import React, { useState } from 'react';
-import { Container, Box, Typography, TextField, Button, Alert, Link } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { Container, Typography, Box, TextField, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { themes } from '../themes';
+import { useTheme } from '@mui/material/styles';
 
-const API_BASE_URL = 'http://localhost:5001/api';
+function Settings({ setThemeIndex, currentThemeIndex }) {
+  const theme = useTheme();
+  const [userId, setUserId] = useState(null);
 
-const resetUserProfile = async (userId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/users/reset-profile`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId }),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error('Error resetting user profile:', error);
-    throw error;
-  }
-};
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('cineswipeUserId');
 
-function Settings() {
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const userId = localStorage.getItem('cineswipeUserId');
+    if (storedUserId) setUserId(storedUserId);
+  }, []);
+
+  const handleSaveApiKeys = () => {
+    localStorage.setItem('geminiApiKey', geminiApiKey);
+    localStorage.setItem('tmdbApiKey', tmdbApiKey);
+    alert('API Keys saved!');
+  };
 
   const handleResetProfile = async () => {
-    if (!userId) {
-      setMessage({ type: 'error', text: 'User ID not found.' });
-      return;
-    }
-
-    if (window.confirm("Are you sure you want to reset your entire movie taste profile? This action cannot be undone.")) {
+    if (!userId) return;
+    if (window.confirm('Are you sure you want to reset your profile? This cannot be undone.')) {
       try {
-        const response = await resetUserProfile(userId);
-        if (response.message === 'User profile reset successfully') {
-          setMessage({ type: 'success', text: 'Your movie taste profile has been reset.' });
-          // Optionally, clear local storage or redirect to home to force a fresh start
-          localStorage.removeItem('cineswipeUserId');
-          // You might want to refresh the page or redirect the user
-          window.location.reload();
+        const response = await fetch(`http://localhost:5001/api/users/reset-profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert(data.message);
+          // Optionally, clear local storage related to user profile or refresh
+          localStorage.removeItem('selectedThemeIndex'); // Reset theme to default
+          window.location.reload(); // Reload app to reflect changes
         } else {
-          setMessage({ type: 'error', text: `Failed to reset profile: ${response.error || 'Unknown error'}` });
+          alert(data.error || 'Failed to reset profile');
         }
       } catch (error) {
-        setMessage({ type: 'error', text: `Error resetting profile: ${error.message}` });
+        console.error('Error resetting profile:', error);
+        alert('Error resetting profile.');
       }
     }
   };
 
+  const handleThemeChange = (event) => {
+    setThemeIndex(event.target.value);
+  };
+
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth="md">
       <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Settings
         </Typography>
-        <Typography variant="body1" gutterBottom>
-          To enable movie suggestions, you need to configure your API keys in the backend.
-        </Typography>
 
-        <Alert severity="info" sx={{ width: '100%', mt: 2 }}>
-          <Typography variant="body2">
-            Your Google Gemini API Key and TMDB API Key should be placed in the `.env` file located in the `backend` directory of your CineSwipe project.
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            Example `.env` file content:
-          </Typography>
-          <pre style={{ backgroundColor: '#f0f0f0', padding: '10px', borderRadius: '5px', overflowX: 'auto' }}>
-            <code>
-PORT=5000
-GEMINI_API_KEY=YOUR_GOOGLE_GEMINI_API_KEY
-TMDB_API_KEY=YOUR_TMDB_API_KEY
-            </code>
-          </pre>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            You can obtain your API keys from:
-            <ul>
-              <li>Google Gemini API: <Link href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</Link></li>
-              <li>TMDB API: <Link href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">The Movie Database (TMDB)</Link></li>
-            </ul>
-          </Typography>
-          <Typography variant="body2">
-            After updating the `.env` file, restart your backend server for the changes to take effect.
-          </Typography>
-        </Alert>
-
-        <Box sx={{ mt: 4, width: '100%' }}>
+        <Box sx={{ width: '100%', mt: 3 }}>
           <Typography variant="h5" component="h2" gutterBottom>
-            Reset Profile
+            API Key Management
           </Typography>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleResetProfile}
-            fullWidth
-          >
-            Reset My Movie Taste Profile
-          </Button>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            This will clear all your movie interactions and suggested movies, starting your profile from scratch.
-          </Typography>
+          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px', p: 2, mt: 2, backgroundColor: theme.palette.background.paper }}>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              To update your API keys, please follow these steps:
+            </Typography>
+            <Typography variant="body2" component="ul" sx={{ pl: 2 }}>
+              <li>1. Locate the <code>.env</code> file in your backend project directory (e.g., <code>/path/to/your/project/backend/.env</code>).</li>
+              <li>2. Open the <code>.env</code> file in a text editor.</li>
+              <li>3. Update the <code>GEMINI_API_KEY</code> and <code>TMDB_API_KEY</code> values with your new keys.</li>
+              <li>4. Save the <code>.env</code> file.</li>
+              <li>5. Restart your backend server for the changes to take effect.</li>
+            </Typography>
+          </Box>
         </Box>
 
-        {message.text && (
-          <Alert severity={message.type} sx={{ width: '100%', mt: 2 }}>
-            {message.text}
-          </Alert>
-        )}
+        <Box sx={{ width: '100%', mt: 5 }}>
+          <Typography variant="h5" component="h2" gutterBottom>
+            App Theme
+          </Typography>
+          <FormControl fullWidth sx={{ mt: 1 }}>
+            <InputLabel id="theme-select-label">Select Theme</InputLabel>
+            <Select
+              labelId="theme-select-label"
+              id="theme-select"
+              value={currentThemeIndex}
+              label="Select Theme"
+              onChange={handleThemeChange}
+            >
+              {themes.map((theme, index) => (
+                <MenuItem key={theme.name} value={index}>
+                  {theme.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Box sx={{ width: '100%', mt: 5 }}>
+          <Typography variant="h5" component="h2" gutterBottom>
+            User Profile
+          </Typography>
+          <Button variant="contained" color="error" onClick={handleResetProfile} sx={{ mt: 2 }}>
+            Reset My Profile
+          </Button>
+        </Box>
       </Box>
     </Container>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MovieCard from './components/MovieCard';
 import { Container, Box, Typography, IconButton, Stack, CircularProgress, AppBar, Toolbar, Button, Tooltip } from '@mui/material';
-import { Favorite, ThumbUpAlt, ThumbDownAlt, Block, Bookmark, DoNotDisturbOn, Settings as SettingsIcon, BarChart as BarChartIcon, HelpOutline as HelpIcon, Undo as UndoIcon } from '@mui/icons-material';
+import { Favorite, ThumbUpAlt, ThumbDownAlt, Block, Bookmark, DoNotDisturbOn, Settings as SettingsIcon, BarChart as BarChartIcon, HelpOutline as HelpIcon, Undo as UndoIcon, Home as HomeIcon } from '@mui/icons-material';
 import { AnimatePresence, motion } from 'framer-motion';
 import { recordInteraction, getMovieSuggestions } from './api/movies';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
@@ -9,6 +9,9 @@ import Settings from './pages/Settings';
 import Infographic from './pages/Infographic';
 import Watchlist from './pages/Watchlist'; // Import the Watchlist component
 import HotkeyModal from './components/HotkeyModal'; // Import the HotkeyModal component
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { CssBaseline } from '@mui/material';
+import { themes } from './themes'; // Import the themes
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -19,7 +22,7 @@ const undoLastInteraction = async (userId) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId }),
+      body: JSON_stringify({ userId }),
     });
     return await response.json();
   } catch (error) {
@@ -220,7 +223,7 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
     <Container maxWidth="lg">
       <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          CineSwipe
+          Capwise
         </Typography>
 
         <Box sx={{ position: 'relative', width: '90vw', maxWidth: 900, height: '70vh', maxHeight: 600, mb: 2 }}>
@@ -242,12 +245,12 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
 
         <Stack direction="row" spacing={2} sx={{ mt: 4, justifyContent: 'center', width: '100%' }}>
           <Tooltip title="Strong Like (Arrow Up)">
-            <IconButton color="primary" size="large" onClick={() => handleInteraction('strong_like')}>
+            <IconButton color="success" size="large" onClick={() => handleInteraction('strong_like')}>
               <Favorite fontSize="large" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Dislike (Arrow Left)">
-            <IconButton color="primary" size="large" onClick={() => handleInteraction('dislike')}>
+            <IconButton color="warning" size="large" onClick={() => handleInteraction('dislike')}>
               <ThumbDownAlt fontSize="large" />
             </IconButton>
           </Tooltip>
@@ -257,7 +260,7 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
             </IconButton>
           </Tooltip>
           <Tooltip title="Strong Dislike (Arrow Down)">
-            <IconButton color="primary" size="large" onClick={() => handleInteraction('strong_dislike')}>
+            <IconButton color="error" size="large" onClick={() => handleInteraction('strong_dislike')}>
               <Block fontSize="large" />
             </IconButton>
           </Tooltip>
@@ -267,12 +270,12 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
             </IconButton>
           </Tooltip>
           <Tooltip title="Not Interested (Shift)">
-            <IconButton color="error" size="large" onClick={() => handleInteraction('not_interested')}>
+            <IconButton color="info" size="large" onClick={() => handleInteraction('not_interested')}>
               <DoNotDisturbOn fontSize="large" />
             </IconButton>
           </Tooltip>
           <Tooltip title="Undo Last Rating (Ctrl+Z)">
-            <IconButton color="info" size="large" onClick={handleUndo}>
+            <IconButton color="inherit" size="large" onClick={handleUndo}>
               <UndoIcon fontSize="large" />
             </IconButton>
           </Tooltip>
@@ -286,43 +289,60 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
 
 function App() {
   const [hotkeyModalOpen, setHotkeyModalOpen] = useState(false);
+  const [currentThemeIndex, setCurrentThemeIndex] = useState(() => {
+    const storedThemeIndex = localStorage.getItem('selectedThemeIndex');
+    return storedThemeIndex ? parseInt(storedThemeIndex, 10) : 0;
+  });
 
   const handleOpenHotkeyModal = () => setHotkeyModalOpen(true);
   const handleCloseHotkeyModal = () => setHotkeyModalOpen(false);
 
+  const setThemeIndex = (index) => {
+    setCurrentThemeIndex(index);
+    localStorage.setItem('selectedThemeIndex', index);
+  };
+
+  const activeTheme = themes[currentThemeIndex];
+
   return (
-    <Router>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Capwise
-          </Typography>
-          <Button color="inherit" component={Link} to="/">
-            Home
-          </Button>
-          <Button color="inherit" component={Link} to="/infographic">
-            <BarChartIcon /> Infographic
-          </Button>
-          <Button color="inherit" component={Link} to="/watchlist">
-            <Bookmark /> Watchlist
-          </Button>
-          <Button color="inherit" component={Link} to="/settings">
-            <SettingsIcon /> Settings
-          </Button>
-          <Button color="inherit" onClick={handleOpenHotkeyModal}>
-            <HelpIcon /> Hotkeys
-          </Button>
-        </Toolbar>
-      </AppBar>
-      <Routes>
-        <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/infographic" element={<Infographic />} />
-        <Route path="/watchlist" element={<Watchlist />} />
-      </Routes>
-      <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
-    </Router>
+    <ThemeProvider theme={activeTheme.theme}>
+      <CssBaseline />
+      <Router>
+        <Box sx={{ background: activeTheme.backgroundGradient, minHeight: '100vh' }}>
+          <AppBar position="static" sx={{ background: activeTheme.appBarGradient }}>
+            <Toolbar>
+              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1.5, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+                Capwise
+              </Typography>
+              <Button color="inherit" component={Link} to="/">
+                <HomeIcon sx={{ mr: 0.5 }} /> Home
+              </Button>
+              <Button color="inherit" component={Link} to="/infographic">
+                <BarChartIcon sx={{ mr: 0.5 }} /> Infographic
+              </Button>
+              <Button color="inherit" component={Link} to="/watchlist">
+                <Bookmark sx={{ mr: 0.5 }} /> Watchlist
+              </Button>
+              <Button color="inherit" component={Link} to="/settings">
+                <SettingsIcon sx={{ mr: 0.5 }} /> Settings
+              </Button>
+              <Button color="inherit" onClick={handleOpenHotkeyModal}>
+                <HelpIcon sx={{ mr: 0.5 }} /> Hotkeys
+              </Button>
+            </Toolbar>
+          </AppBar>
+          <Routes>
+            <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
+            <Route path="/settings" element={<Settings setThemeIndex={setThemeIndex} currentThemeIndex={currentThemeIndex} />} />
+            <Route path="/infographic" element={<Infographic />} />
+            <Route path="/watchlist" element={<Watchlist />} />
+          </Routes>
+          <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+        </Box>
+      </Router>
+    </ThemeProvider>
   );
 }
 
 export default App;
+
