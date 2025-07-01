@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import MovieCard from './components/MovieCard';
 import { Container, Box, Typography, IconButton, Stack, CircularProgress, AppBar, Toolbar, Button, Tooltip } from '@mui/material';
 import { Favorite, ThumbUpAlt, ThumbDownAlt, Block, Bookmark, DoNotDisturbOn, Settings as SettingsIcon, BarChart as BarChartIcon, HelpOutline as HelpIcon, Undo as UndoIcon, Home as HomeIcon } from '@mui/icons-material';
 import { AnimatePresence, motion } from 'framer-motion';
-import { recordInteraction, getMovieSuggestions } from './api/movies';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Settings from './pages/Settings';
 import Infographic from './pages/Infographic';
@@ -12,76 +11,22 @@ import HotkeyModal from './components/HotkeyModal'; // Import the HotkeyModal co
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 import { themes } from './themes'; // Import the themes
-
-const API_BASE_URL = 'http://localhost:5001/api';
-
-const undoLastInteraction = async (userId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/users/undo-last-interaction`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ userId }),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error('Error undoing last interaction:', error);
-    throw error;
-  }
-};
+import { MovieContext, MovieProvider } from './context/MovieContext'; // Import MovieContext and MovieProvider
 
 function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHotkeyModal }) {
-  const [movies, setMovies] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
+  const {
+    movies,
+    currentIndex,
+    loading,
+    userId,
+    isInitialLoad,
+    fetchMovies,
+    handleInteraction: contextHandleInteraction, // Rename to avoid conflict
+    handleUndo: contextHandleUndo, // Rename to avoid conflict
+    setCurrentIndex,
+  } = useContext(MovieContext);
+
   const [exitAnimation, setExitAnimation] = useState({});
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // New state for initial load
-  const [initialFetchDone, setInitialFetchDone] = useState(false); // New state to track initial fetch
-
-  // Initialize userId from localStorage or generate a new one
-  useEffect(() => {
-    let storedUserId = localStorage.getItem('cineswipeUserId');
-    if (!storedUserId) {
-      storedUserId = 'user_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('cineswipeUserId', storedUserId);
-    }
-    setUserId(storedUserId);
-  }, []);
-
-  const fetchMovies = useCallback(async () => {
-    if (!userId) return; // Wait for userId to be set
-
-    setLoading(true);
-    try {
-      const data = await getMovieSuggestions(userId);
-      if (data.movies && data.movies.length > 0) {
-        setMovies(data.movies);
-        setCurrentIndex(0);
-      } else {
-        setMovies([]);
-        console.log("No new movie suggestions.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch movies:", error);
-      setMovies([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]); // Removed isInitialLoad from dependencies
-
-  // Fetch initial movies
-  useEffect(() => {
-    if (userId && !initialFetchDone) {
-      const performInitialFetch = async () => {
-        await fetchMovies();
-        setInitialFetchDone(true); // Mark initial fetch as done
-        setIsInitialLoad(false); // Set initial load flag to false after the first fetch completes
-      };
-      performInitialFetch();
-    }
-  }, [userId, fetchMovies, initialFetchDone]);
 
   const currentMovie = movies[currentIndex];
 
@@ -113,21 +58,8 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
     }
     setExitAnimation(animationProps);
 
-    try {
-      await recordInteraction(userId, currentMovie.id, action, {
-        title: currentMovie.title,
-        genres: currentMovie.genres,
-        director: currentMovie.director,
-        writers: currentMovie.writers,
-        actors: currentMovie.actors,
-        cover: currentMovie.cover,
-        releaseYear: currentMovie.releaseYear,
-        imdbId: currentMovie.imdbId,
-      });
-      console.log(`Movie ${currentMovie.title} - Action: ${action} recorded.`);
-    } catch (error) {
-      console.error("Error recording interaction:", error);
-    }
+    // Use the handleInteraction from context
+    await contextHandleInteraction(action, currentMovie, currentIndex);
 
     // Move to the next movie and fetch more if needed
     setTimeout(() => {
@@ -139,32 +71,12 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
       }
       setExitAnimation({}); // Reset animation for next card
     }, 200); // Match with exit transition duration
-  }, [currentIndex, currentMovie, fetchMovies, movies.length, userId]);
+  }, [currentIndex, currentMovie, fetchMovies, movies.length, userId, contextHandleInteraction, setCurrentIndex]);
 
   const handleUndo = useCallback(async () => {
     if (!userId) return;
-
-    try {
-        const response = await undoLastInteraction(userId);
-
-        if (response.message === 'Last interaction undone successfully' && response.movieDetails) {
-            console.log('Last interaction undone. Restoring movie:', response.movieDetails.title);
-
-            // Re-insert the undone movie at the current position in the array.
-            // This places it back on top of the stack for the user to interact with again.
-            setMovies(prevMovies => {
-                const newMovies = [...prevMovies];
-                newMovies.splice(currentIndex, 0, response.movieDetails);
-                return newMovies;
-            });
-
-        } else {
-            console.error('Failed to undo interaction:', response.message || 'No movie details returned.');
-        }
-    } catch (error) {
-        console.error('Error during undo operation:', error);
-    }
-  }, [currentIndex, userId]);
+    await contextHandleUndo();
+  }, [userId, contextHandleUndo]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -343,12 +255,14 @@ function App() {
               </Button>
             </Toolbar>
           </AppBar>
-          <Routes>
-            <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
-            <Route path="/settings" element={<Settings setThemeIndex={setThemeIndex} currentThemeIndex={currentThemeIndex} />} />
-            <Route path="/infographic" element={<Infographic />} />
-            <Route path="/watchlist" element={<Watchlist />} />
-          </Routes>
+          <MovieProvider>
+            <Routes>
+              <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
+              <Route path="/settings" element={<Settings setThemeIndex={setThemeIndex} currentThemeIndex={currentThemeIndex} />} />
+              <Route path="/infographic" element={<Infographic />} />
+              <Route path="/watchlist" element={<Watchlist />} />
+            </Routes>
+          </MovieProvider>
           <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
         </Box>
       </Router>
