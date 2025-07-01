@@ -1,0 +1,328 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import MovieCard from './components/MovieCard';
+import { Container, Box, Typography, IconButton, Stack, CircularProgress, AppBar, Toolbar, Button, Tooltip } from '@mui/material';
+import { Favorite, ThumbUpAlt, ThumbDownAlt, Block, Bookmark, DoNotDisturbOn, Settings as SettingsIcon, BarChart as BarChartIcon, HelpOutline as HelpIcon, Undo as UndoIcon } from '@mui/icons-material';
+import { AnimatePresence, motion } from 'framer-motion';
+import { recordInteraction, getMovieSuggestions } from './api/movies';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import Settings from './pages/Settings';
+import Infographic from './pages/Infographic';
+import Watchlist from './pages/Watchlist'; // Import the Watchlist component
+import HotkeyModal from './components/HotkeyModal'; // Import the HotkeyModal component
+
+const API_BASE_URL = 'http://localhost:5001/api';
+
+const undoLastInteraction = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/users/undo-last-interaction`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Error undoing last interaction:', error);
+    throw error;
+  }
+};
+
+function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHotkeyModal }) {
+  const [movies, setMovies] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState(null);
+  const [exitAnimation, setExitAnimation] = useState({});
+
+  // Initialize userId from localStorage or generate a new one
+  useEffect(() => {
+    let storedUserId = localStorage.getItem('cineswipeUserId');
+    if (!storedUserId) {
+      storedUserId = 'user_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('cineswipeUserId', storedUserId);
+    }
+    setUserId(storedUserId);
+  }, []);
+
+  const fetchMovies = useCallback(async () => {
+    if (!userId) return; // Wait for userId to be set
+
+    setLoading(true);
+    try {
+      const data = await getMovieSuggestions(userId);
+      if (data.movies && data.movies.length > 0) {
+        setMovies((prevMovies) => {
+          const existingMovieIds = new Set(prevMovies.map(m => m.id));
+          const uniqueNewMovies = data.movies.filter(newMovie => !existingMovieIds.has(newMovie.id));
+          return [...prevMovies, ...uniqueNewMovies];
+        });
+      } else {
+        console.log("No new movie suggestions.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch movies:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  // Fetch initial movies or when current batch runs low
+  useEffect(() => {
+    if (userId && (movies.length === 0 || currentIndex >= movies.length / 2)) {
+      fetchMovies();
+    }
+  }, [userId, movies.length, currentIndex, fetchMovies]);
+
+  const currentMovie = movies[currentIndex];
+
+  const handleInteraction = async (action) => {
+    if (!currentMovie || !userId) return;
+
+    let animationProps = {};
+    switch (action) {
+      case 'dislike':
+        animationProps = { x: -1000, opacity: 0, rotate: -10 };
+        break;
+      case 'like':
+        animationProps = { x: 1000, opacity: 0, rotate: 10 };
+        break;
+      case 'strong_dislike':
+        animationProps = { y: 1000, opacity: 0, scale: 0.5 };
+        break;
+      case 'strong_like':
+        animationProps = { y: -1000, opacity: 0, scale: 0.5 };
+        break;
+      case 'watchlist':
+        animationProps = { scale: 0.5, opacity: 0, transition: { duration: 0.3 } }; // Snazzy save
+        break;
+      case 'not_interested':
+        animationProps = { rotate: 360, opacity: 0, transition: { duration: 0.3 } }; // Snazzy not interested
+        break;
+      default:
+        break;
+    }
+    setExitAnimation(animationProps);
+
+    try {
+      await recordInteraction(userId, currentMovie.id, action, {
+        title: currentMovie.title,
+        genres: currentMovie.genres,
+        director: currentMovie.director,
+        writers: currentMovie.writers,
+        actors: currentMovie.actors,
+        cover: currentMovie.cover,
+        releaseYear: currentMovie.releaseYear,
+        imdbId: currentMovie.imdbId,
+      });
+      console.log(`Movie ${currentMovie.title} - Action: ${action} recorded.`);
+    } catch (error) {
+      console.error("Error recording interaction:", error);
+    }
+
+    // Move to the next movie after a short delay for animation
+    setTimeout(() => {
+      setCurrentIndex((prevIndex) => prevIndex + 1);
+      setExitAnimation({}); // Reset animation for next card
+    }, 200); // Match with exit transition duration
+  };
+
+  const handleUndo = async () => {
+    if (!userId) return;
+
+    try {
+      const response = await undoLastInteraction(userId);
+      if (response.message === 'Last interaction undone successfully') {
+        console.log('Last interaction undone.');
+        // Decrement currentIndex to go back to the previous movie
+        setCurrentIndex((prevIndex) => Math.max(0, prevIndex - 1));
+        // Optionally, re-fetch movies to ensure the list is up-to-date after undo
+        // fetchMovies();
+      } else if (response.message === 'No interactions to undo') {
+        console.log('No interactions to undo.');
+      } else {
+        console.error('Failed to undo interaction:', response.error);
+      }
+    } catch (error) {
+      console.error('Error during undo operation:', error);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!currentMovie) return;
+
+      // Ctrl+Z for Undo
+      if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+        event.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          handleInteraction('dislike');
+          break;
+        case 'ArrowRight':
+          handleInteraction('like');
+          break;
+        case 'ArrowUp':
+          handleInteraction('strong_like');
+          break;
+        case 'ArrowDown':
+          handleInteraction('strong_dislike');
+          break;
+        case ' ': // Spacebar
+          event.preventDefault();
+          handleInteraction('watchlist');
+          break;
+        case 'Shift':
+          event.preventDefault();
+          handleInteraction('not_interested');
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentIndex, currentMovie, handleInteraction, handleUndo]);
+
+  if (loading) {
+    return (
+      <Container maxWidth="sm">
+        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <CircularProgress />
+          <Typography variant="h6" sx={{ mt: 2 }}>Loading movies...</Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  if (!currentMovie && !loading) {
+    return (
+      <Container maxWidth="sm">
+        <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Capwise
+          </Typography>
+          <Typography variant="h6">No more movies to suggest! Try refreshing or check your API keys.</Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  return (
+    <Container maxWidth="lg">
+      <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          CineSwipe
+        </Typography>
+
+        <Box sx={{ position: 'relative', width: '90vw', maxWidth: 900, height: '70vh', maxHeight: 600, mb: 2 }}>
+          <AnimatePresence initial={false}>
+            {currentMovie && (
+              <motion.div
+                key={currentMovie.id}
+                initial={{ opacity: 0, y: 50, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={exitAnimation}
+                transition={{ duration: 0.2 }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              >
+                <MovieCard movie={currentMovie} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Box>
+
+        <Stack direction="row" spacing={2} sx={{ mt: 4, justifyContent: 'center', width: '100%' }}>
+          <Tooltip title="Strong Like (Arrow Up)">
+            <IconButton color="primary" size="large" onClick={() => handleInteraction('strong_like')}>
+              <Favorite fontSize="large" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Dislike (Arrow Left)">
+            <IconButton color="primary" size="large" onClick={() => handleInteraction('dislike')}>
+              <ThumbDownAlt fontSize="large" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Like (Arrow Right)">
+            <IconButton color="primary" size="large" onClick={() => handleInteraction('like')}>
+              <ThumbUpAlt fontSize="large" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Strong Dislike (Arrow Down)">
+            <IconButton color="primary" size="large" onClick={() => handleInteraction('strong_dislike')}>
+              <Block fontSize="large" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Save to Watchlist (Spacebar)">
+            <IconButton color="secondary" size="large" onClick={() => handleInteraction('watchlist')}>
+              <Bookmark fontSize="large" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Not Interested (Shift)">
+            <IconButton color="error" size="large" onClick={() => handleInteraction('not_interested')}>
+              <DoNotDisturbOn fontSize="large" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Undo Last Rating (Ctrl+Z)">
+            <IconButton color="info" size="large" onClick={handleUndo}>
+              <UndoIcon fontSize="large" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
+
+        <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+      </Box>
+    </Container>
+  );
+}
+
+function App() {
+  const [hotkeyModalOpen, setHotkeyModalOpen] = useState(false);
+
+  const handleOpenHotkeyModal = () => setHotkeyModalOpen(true);
+  const handleCloseHotkeyModal = () => setHotkeyModalOpen(false);
+
+  return (
+    <Router>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Capwise
+          </Typography>
+          <Button color="inherit" component={Link} to="/">
+            Home
+          </Button>
+          <Button color="inherit" component={Link} to="/infographic">
+            <BarChartIcon /> Infographic
+          </Button>
+          <Button color="inherit" component={Link} to="/watchlist">
+            <Bookmark /> Watchlist
+          </Button>
+          <Button color="inherit" component={Link} to="/settings">
+            <SettingsIcon /> Settings
+          </Button>
+          <Button color="inherit" onClick={handleOpenHotkeyModal}>
+            <HelpIcon /> Hotkeys
+          </Button>
+        </Toolbar>
+      </AppBar>
+      <Routes>
+        <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/infographic" element={<Infographic />} />
+        <Route path="/watchlist" element={<Watchlist />} />
+      </Routes>
+      <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+    </Router>
+  );
+}
+
+export default App;
