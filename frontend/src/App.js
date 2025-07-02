@@ -280,7 +280,7 @@ function App() {
                 <HomeIcon sx={{ mr: 0.5 }} /> Home
               </Button>
               <Button color="inherit" component={Link} to="/infographic">
-                <BarChartIcon sx={{ mr: 0.5 }} /> Infographic
+                <BarChartIcon sx={{ mr: 0.5 }} /> INFO
               </Button>
               <Button color="inherit" component={Link} to="/watchlist">
                 <Bookmark sx={{ mr: 0.5 }} /> Records

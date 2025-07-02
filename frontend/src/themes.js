@@ -284,32 +284,6 @@ export const themes = [
     appBarGradient: null,
   },
   {
-    name: 'Skibidi Toilet',
-    theme: createTheme({
-      palette: {
-        primary: {
-          main: '#4A90E2', // Blue, like water
-        },
-        secondary: {
-          main: '#FFD700', // Gold/yellow, for a quirky accent
-        },
-        background: {
-          default: '#F0F8FF', // Alice Blue, light and clean
-          paper: '#E0FFFF', // Light Cyan, slightly different for contrast
-        },
-        text: {
-          primary: '#2F4F4F', // Dark Slate Gray
-          secondary: '#696969', // Dim Gray
-        },
-      },
-      typography: {
-        fontFamily: 'Comic Sans MS, cursive', // A playful, meme-like font
-      },
-    }),
-    backgroundGradient: null,
-    appBarGradient: null,
-  },
-  {
     name: 'Capybara',
     theme: createTheme({
       palette: {

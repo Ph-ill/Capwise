@@ -101,4 +101,21 @@ router.delete('/interaction/:userId/:movieId', async (req, res) => {
     }
 });
 
+router.get('/taste-profile/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const userStore = req.db.userStore;
+
+    try {
+        const userProfile = await userStore.getUserProfile(userId);
+        if (!userProfile) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+        // Return only the tasteProfile for the infographic
+        res.json({ tasteProfile: userProfile.tasteProfile });
+    } catch (error) {
+        console.error('Error fetching user taste profile:', error);
+        res.status(500).json({ error: 'Failed to fetch user taste profile' });
+    }
+});
+
 module.exports = router;

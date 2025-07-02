@@ -19,6 +19,16 @@ class UserStore {
                         directors: {},
                         writers: {},
                         actors: {},
+                        releaseYears: {}, // Added for infographic timeline
+                        interactionCounts: { // New field for interaction counts
+                            total: 0,
+                            strong_like: 0,
+                            like: 0,
+                            dislike: 0,
+                            strong_dislike: 0,
+                            watchlist: 0,
+                            not_interested: 0,
+                        },
                     },
                     suggestedMovies: [], // To keep track of movies already suggested (array of { movieId, movieTitle })
                 };
@@ -138,6 +148,16 @@ class UserStore {
             directors: {},
             writers: {},
             actors: {},
+            releaseYears: {}, // Added for infographic timeline
+            interactionCounts: { // Initialize interaction counts
+                total: 0,
+                strong_like: 0,
+                like: 0,
+                dislike: 0,
+                strong_dislike: 0,
+                watchlist: 0,
+                not_interested: 0,
+            },
         };
 
         interactions.forEach(interaction => {
@@ -147,6 +167,12 @@ class UserStore {
             if (!movieDetails) {
                 console.warn("Skipping interaction due to missing movieDetails:", interaction);
                 return; // Skip this interaction
+            }
+
+            // Update interaction counts
+            newTasteProfile.interactionCounts.total++;
+            if (newTasteProfile.interactionCounts[type] !== undefined) {
+                newTasteProfile.interactionCounts[type]++;
             }
 
             const score = (type === 'like' || type === 'strong_like') ? 1 : -1;
@@ -179,6 +205,12 @@ class UserStore {
                     const sanitizedActor = this._sanitizeKey(actor);
                     newTasteProfile.actors[sanitizedActor] = (newTasteProfile.actors[sanitizedActor] || 0) + score;
                 });
+            }
+
+            // Update release years (for timeline)
+            if (movieDetails.releaseYear) {
+                const decade = Math.floor(movieDetails.releaseYear / 10) * 10; // Get the decade
+                newTasteProfile.releaseYears[decade] = (newTasteProfile.releaseYears[decade] || 0) + score;
             }
         });
 
