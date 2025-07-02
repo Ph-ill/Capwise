@@ -5,14 +5,14 @@ class UserStore {
         this.db = db.users;
     }
 
-    async findOrCreate(userId) {
+    async findOrCreate(profileName) {
         return new Promise((resolve, reject) => {
-            this.db.findOne({ userId }, (err, doc) => {
+            this.db.findOne({ profileName }, (err, doc) => {
                 if (err) return reject(err);
                 if (doc) return resolve(doc);
 
                 const newUser = {
-                    userId,
+                    profileName,
                     interactions: [], // { movieId, type: 'like' | 'dislike' | 'strong_like' | 'strong_dislike' | 'watchlist' | 'not_interested', timestamp, movieDetails }
                     tasteProfile: {
                         genres: {},
@@ -40,9 +40,9 @@ class UserStore {
         });
     }
 
-    async addInteraction(userId, movieId, interactionType, movieDetails) {
+    async addInteraction(profileName, movieId, interactionType, movieDetails) {
         return new Promise((resolve, reject) => {
-            this.db.findOne({ userId }, (err, user) => {
+            this.db.findOne({ profileName }, (err, user) => {
                 if (err) return reject(err);
                 if (!user) return reject(new Error('User not found'));
 
@@ -54,7 +54,7 @@ class UserStore {
                 user.tasteProfile = this._recalculateTasteProfile(user.interactions);
 
                 this.db.update(
-                    { userId },
+                    { profileName },
                     { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile } },
                     { upsert: true },
                     (err, numReplaced) => {
@@ -66,9 +66,9 @@ class UserStore {
         });
     }
 
-    async undoLastInteraction(userId) {
+    async undoLastInteraction(profileName) {
         return new Promise((resolve, reject) => {
-            this.db.findOne({ userId }, (err, user) => {
+            this.db.findOne({ profileName }, (err, user) => {
                 if (err) return reject(err);
                 if (!user || user.interactions.length === 0) {
                     return resolve({ undone: false, message: 'No interactions to undo.' });
@@ -78,7 +78,7 @@ class UserStore {
                 user.tasteProfile = this._recalculateTasteProfile(user.interactions);
 
                 this.db.update(
-                    { userId },
+                    { profileName },
                     { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile } },
                     {},
                     (err, numReplaced) => {
@@ -94,10 +94,10 @@ class UserStore {
         });
     }
 
-    async resetUserProfile(userId) {
+    async resetUserProfile(profileName) {
         return new Promise((resolve, reject) => {
             this.db.update(
-                { userId },
+                { profileName },
                 { $set: { interactions: [], tasteProfile: { genres: {}, directors: {}, writers: {}, actors: {} }, suggestedMovies: [] } },
                 {}, // Options, no upsert needed here as user should exist
                 (err, numReplaced) => {
@@ -108,9 +108,9 @@ class UserStore {
         });
     }
 
-    async removeInteraction(userId, movieIdToRemove) {
+    async removeInteraction(profileName, movieIdToRemove) {
         return new Promise((resolve, reject) => {
-            this.db.findOne({ userId }, (err, user) => {
+            this.db.findOne({ profileName }, (err, user) => {
                 if (err) return reject(err);
                 if (!user) return reject(new Error('User not found'));
 
@@ -126,7 +126,7 @@ class UserStore {
                 user.tasteProfile = this._recalculateTasteProfile(user.interactions);
 
                 this.db.update(
-                    { userId },
+                    { profileName },
                     { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile, suggestedMovies: user.suggestedMovies } },
                     {},
                     (err, numReplaced) => {
@@ -217,10 +217,10 @@ class UserStore {
         return newTasteProfile;
     }
 
-    async updateSuggestedMovies(userId, suggestedMovies) {
+    async updateSuggestedMovies(profileName, suggestedMovies) {
         return new Promise((resolve, reject) => {
             this.db.update(
-                { userId },
+                { profileName },
                 { $set: { suggestedMovies: suggestedMovies } },
                 { upsert: true },
                 (err, numReplaced) => {
@@ -231,12 +231,50 @@ class UserStore {
         });
     }
 
-    async getUserProfile(userId) {
+    async getUserProfile(profileName) {
         return new Promise((resolve, reject) => {
-            this.db.findOne({ userId }, (err, doc) => {
+            this.db.findOne({ profileName }, (err, doc) => {
                 if (err) return reject(err);
                 resolve(doc);
             });
+        });
+    }
+
+    async getAllProfiles() {
+        return new Promise((resolve, reject) => {
+            this.db.find({}, (err, docs) => {
+                if (err) return reject(err);
+                resolve(docs.map(doc => ({
+                    _id: doc._id,
+                    profileName: doc.profileName,
+                    lastActive: doc.lastActive,
+                    // Include userId for old profiles if it exists and profileName is missing
+                    userId: doc.userId || null
+                })));
+            });
+        });
+    }
+
+    async deleteProfile(profileName) {
+        return new Promise((resolve, reject) => {
+            this.db.remove({ profileName }, {}, (err, numRemoved) => {
+                if (err) return reject(err);
+                resolve(numRemoved);
+            });
+        });
+    }
+
+    async updateLastActive(profileName) {
+        return new Promise((resolve, reject) => {
+            this.db.update(
+                { profileName },
+                { $set: { lastActive: new Date() } },
+                {},
+                (err, numReplaced) => {
+                    if (err) return reject(err);
+                    resolve(numReplaced);
+                }
+            );
         });
     }
 }

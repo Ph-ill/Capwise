@@ -20,6 +20,9 @@ const HotkeyModal = ({ open, handleClose }) => {
         boxShadow: 24,
         p: 4,
       }}>
+        <Typography variant="body1" sx={{ mb: 2 }}>
+          Capwise helps you discover movies by rating them. Your ratings build a personalized taste profile, which is used to suggest new movies and generate information about your preferences.
+        </Typography>
         <Typography id="hotkey-modal-title" variant="h6" component="h2">
           Keyboard Shortcuts
         </Typography>

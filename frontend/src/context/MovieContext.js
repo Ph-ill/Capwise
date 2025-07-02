@@ -3,30 +3,36 @@ import { getMovieSuggestions, recordInteraction, undoLastInteraction } from '../
 
 export const MovieContext = createContext();
 
-export const MovieProvider = ({ children }) => {
+export const MovieProvider = ({ children, profileName: propProfileName }) => {
   const [movies, setMovies] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
+  const [profileName, setProfileName] = useState(propProfileName);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
 
-  // Initialize userId from localStorage or generate a new one
+  // Update profileName state when propProfileName changes
   useEffect(() => {
-    let storedUserId = localStorage.getItem('cineswipeUserId');
-    if (!storedUserId) {
-      storedUserId = 'user_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('cineswipeUserId', storedUserId);
+    setProfileName(propProfileName);
+    // Reset initial fetch state when profile changes
+    setIsInitialLoad(true);
+    setInitialFetchDone(false);
+  }, [propProfileName]);
+
+  // Remove automatic userId generation
+  useEffect(() => {
+    const storedProfileName = localStorage.getItem('activeProfile');
+    if (storedProfileName) {
+      setProfileName(storedProfileName);
     }
-    setUserId(storedUserId);
   }, []);
 
   const fetchMovies = useCallback(async () => {
-    if (!userId) return;
+    if (!profileName) return;
 
     setLoading(true);
     try {
-      const data = await getMovieSuggestions(userId);
+      const data = await getMovieSuggestions(profileName);
       if (data.movies && data.movies.length > 0) {
         setMovies(data.movies);
         setCurrentIndex(0);
@@ -40,11 +46,11 @@ export const MovieProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [profileName]);
 
   // Fetch initial movies
   useEffect(() => {
-    if (userId && !initialFetchDone) {
+    if (profileName && !initialFetchDone) {
       const performInitialFetch = async () => {
         await fetchMovies();
         setInitialFetchDone(true);
@@ -52,13 +58,13 @@ export const MovieProvider = ({ children }) => {
       };
       performInitialFetch();
     }
-  }, [userId, fetchMovies, initialFetchDone]);
+  }, [profileName, fetchMovies, initialFetchDone]);
 
   const handleInteraction = useCallback(async (action, movie, movieIndex) => {
-    if (!movie || !userId) return;
+    if (!movie || !profileName) return;
 
     try {
-      await recordInteraction(userId, movie.id, action, {
+      await recordInteraction(profileName, movie.id, action, {
         id: movie.id, // Ensure movie ID is stored in movieDetails
         title: movie.title,
         genres: movie.genres,
@@ -81,13 +87,13 @@ export const MovieProvider = ({ children }) => {
     } else {
       setCurrentIndex(nextIndex);
     }
-  }, [movies.length, fetchMovies, userId]); // Removed currentIndex from dependencies
+  }, [movies.length, fetchMovies, profileName]); // Removed currentIndex from dependencies
 
   const handleUndo = useCallback(async () => {
-    if (!userId) return;
+    if (!profileName) return;
 
     try {
-        const response = await undoLastInteraction(userId);
+        const response = await undoLastInteraction(profileName);
 
         if (response.message === 'Last interaction undone successfully' && response.movieDetails) {
             console.log('Last interaction undone. Restoring movie:', response.movieDetails.title);
@@ -105,13 +111,14 @@ export const MovieProvider = ({ children }) => {
     } catch (error) {
         console.error('Error during undo operation:', error);
     }
-  }, [currentIndex, userId]);
+  }, [currentIndex, profileName]);
 
   const value = {
     movies,
     currentIndex,
     loading,
-    userId,
+    profileName,
+    setProfileName,
     isInitialLoad,
     fetchMovies,
     handleInteraction,

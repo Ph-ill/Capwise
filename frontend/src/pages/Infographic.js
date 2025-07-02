@@ -13,7 +13,7 @@ const generatePastelColors = (numColors) => {
 };
 
 const Infographic = () => {
-  const { userId } = useContext(MovieContext);
+  const { profileName } = useContext(MovieContext);
   const [tasteProfile, setTasteProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,11 +32,11 @@ const Infographic = () => {
 
   useEffect(() => {
     const fetchTasteProfile = async () => {
-      if (!userId) return;
+      if (!profileName) return;
 
       try {
         setLoading(true);
-        const response = await fetch(`http://localhost:5001/api/users/taste-profile/${userId}`);
+        const response = await fetch(`http://localhost:5001/api/users/taste-profile/${profileName}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -51,7 +51,7 @@ const Infographic = () => {
     };
 
     fetchTasteProfile();
-  }, [userId]);
+  }, [profileName]);
 
   useEffect(() => {
     if (tasteProfile) {
@@ -120,7 +120,6 @@ const Infographic = () => {
     ctx.font = `18px ${theme.theme.typography.fontFamily}`;
     ctx.fillStyle = textColor;
     ctx.textAlign = 'left';
-    ctx.fillText(title, 10, 30);
 
     sortedData.forEach(([label, score], index) => {
       const barHeight = (Math.abs(score) / maxValue) * chartHeight * 0.8; // Scale to 80% of chart height
@@ -236,16 +235,11 @@ const Infographic = () => {
 
     const padding = 60;
     const chartWidth = canvas.width - padding * 2;
-    const chartHeight = canvas.height - padding * 2;
+    const chartHeight = canvas.height - padding * 2; // Adjusted to use full height minus padding
     const minDecade = sortedDecades.length > 0 ? sortedDecades[0][0] : 0;
     const maxDecade = sortedDecades.length > 0 ? sortedDecades[sortedDecades.length - 1][0] : minDecade; // If only one decade, maxDecade is minDecade
-    const maxScore = Math.max(...sortedDecades.map(([, score]) => Math.abs(score)));
+    const maxScore = Math.max(...sortedDecades.map(([, score]) => score)); // Max score will be the top of the chart
     const decadeRange = maxDecade - minDecade;
-
-    console.log("drawTimeline - minDecade:", minDecade);
-    console.log("drawTimeline - maxDecade:", maxDecade);
-    console.log("drawTimeline - maxScore:", maxScore);
-    console.log("drawTimeline - decadeRange:", decadeRange);
 
     // Draw axes
     ctx.beginPath();
@@ -253,16 +247,6 @@ const Infographic = () => {
     ctx.moveTo(padding, canvas.height - padding);
     ctx.lineTo(canvas.width - padding, canvas.height - padding);
     ctx.stroke();
-
-    // Draw zero line
-    const zeroY = (canvas.height - padding) - (maxScore / (2 * maxScore)) * chartHeight;
-    ctx.beginPath();
-    ctx.strokeStyle = textColor + "88"; // Slightly transparent
-    ctx.setLineDash([5, 5]); // Dashed line
-    ctx.moveTo(padding, zeroY);
-    ctx.lineTo(canvas.width - padding, zeroY);
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset line dash
 
     // Draw labels and points
     ctx.fillStyle = textColor;
@@ -274,7 +258,7 @@ const Infographic = () => {
 
     const points = sortedDecades.map(([decade, score]) => {
       const x = padding + (decadeRange === 0 ? 0 : ((decade - minDecade) / decadeRange)) * chartWidth;
-      const y = (canvas.height - padding) - ((score + maxScore) / (2 * maxScore)) * chartHeight;
+      const y = (canvas.height - padding) - (score / maxScore) * chartHeight; // Scale from 0 to maxScore
       return { x, y, decade, score };
     });
 
@@ -361,9 +345,9 @@ const Infographic = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary }}>
-        Your Movie Taste Infographic
+    <Container maxWidth="lg" sx={{ mt: 4, pb: 4 }}>
+      <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary, mb: 4 }}>
+        Your Movie Taste Profile
       </Typography>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
@@ -494,11 +478,11 @@ const Infographic = () => {
         </Box>
       </Paper>
 
-      <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ color: activeTheme.theme.palette.text.primary }}>
+      <Paper elevation={3} sx={{ mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
+        <Typography variant="h5" gutterBottom sx={{ p: 3, color: activeTheme.theme.palette.text.primary }}>
           Movies by Decade
         </Typography>
-        <Box sx={{ width: '100%', height: '350px' }}>
+        <Box sx={{ width: '100%', height: '350px', p: 3 }}>
           <canvas ref={timelineChartRef} style={{ width: '100%', height: '100%' }}></canvas>
         </Box>
       </Paper>

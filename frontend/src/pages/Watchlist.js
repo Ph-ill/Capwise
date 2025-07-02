@@ -1,57 +1,42 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Container, Typography, Box, CircularProgress, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import WatchlistItem from '../components/WatchlistItem'; // Import the new WatchlistItem component
+import { MovieContext } from '../context/MovieContext';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
-const fetchWatchlist = async (userId) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/users/watchlist/${userId}`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const data = await response.json();
-    return data.watchlist;
-  } catch (error) {
-    console.error('Error fetching watchlist:', error);
-    return [];
-  }
-};
-
 function Watchlist() {
+  const { profileName } = useContext(MovieContext);
   const [watchlistMovies, setWatchlistMovies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState(null);
   const [filter, setFilter] = useState('watchlist'); // Default filter to watchlist
 
   const getWatchlist = useCallback(async () => {
-    if (!userId) return; // Ensure userId is available before fetching
-    setLoading(true);
-    const response = await fetch(`${API_BASE_URL}/users/profile/${userId}`);
-    if (response.ok) {
-      const data = await response.json();
-      setWatchlistMovies(data.profile.interactions || []);
-    } else {
-      console.error('Error fetching user profile for watchlist filtering');
-      setWatchlistMovies([]);
+    if (!profileName) {
+      setLoading(false);
+      return; // Ensure profileName is available before fetching
     }
-    setLoading(false);
-  }, [userId]); // Dependency on userId
-
-  useEffect(() => {
-    const storedUserId = localStorage.getItem('cineswipeUserId');
-    if (storedUserId) {
-      setUserId(storedUserId);
-    } else {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/profile/${profileName}`);
+      if (response.ok) {
+        const data = await response.json();
+        setWatchlistMovies(data.profile.interactions || []);
+      } else {
+        console.error('Error fetching user profile for watchlist filtering');
+        setWatchlistMovies([]);
+      }
+    } catch (error) {
+      console.error('Network error or server is down:', error);
+      setWatchlistMovies([]);
+    } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profileName]); // Dependency on profileName
 
   useEffect(() => {
-    if (userId) {
-      getWatchlist();
-    }
-  }, [userId, getWatchlist]); // Dependency on userId and getWatchlist
+    getWatchlist();
+  }, [getWatchlist]); // Dependency on getWatchlist
 
   const handleFilterChange = (event, newFilter) => {
     if (newFilter !== null) { // Prevent unselecting all
@@ -98,7 +83,7 @@ function Watchlist() {
         {filteredMovies.length > 0 ? (
           <Box sx={{ width: '100%' }}>
             {filteredMovies.map((movie) => (
-              <WatchlistItem key={movie.movieDetails.id} movie={movie.movieDetails} userId={userId} onRemove={getWatchlist} />
+              <WatchlistItem key={movie.movieDetails.id} movie={movie.movieDetails} profileName={profileName} onRemove={getWatchlist} />
             ))}
           </Box>
         ) : (

@@ -1,13 +1,13 @@
 const API_BASE_URL = 'http://localhost:5001/api';
 
-export const recordInteraction = async (userId, movieId, interactionType, movieDetails) => {
+export const recordInteraction = async (profileName, movieId, interactionType, movieDetails) => {
     try {
         const response = await fetch(`${API_BASE_URL}/movies/interact`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ userId, movieId, interactionType, movieDetails }),
+            body: JSON.stringify({ profileName, movieId, interactionType, movieDetails }),
         });
         return await response.json();
     } catch (error) {
@@ -16,14 +16,14 @@ export const recordInteraction = async (userId, movieId, interactionType, movieD
     }
 };
 
-export const getMovieSuggestions = async (userId) => {
+export const getMovieSuggestions = async (profileName) => {
     try {
         const response = await fetch(`${API_BASE_URL}/movies/suggest`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ userId }),
+            body: JSON.stringify({ profileName }),
         });
         return await response.json();
     } catch (error) {
@@ -32,14 +32,14 @@ export const getMovieSuggestions = async (userId) => {
     }
 };
 
-export const undoLastInteraction = async (userId) => {
+export const undoLastInteraction = async (profileName) => {
   try {
     const response = await fetch(`${API_BASE_URL}/users/undo-last-interaction`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ profileName }),
     });
     return await response.json();
   } catch (error) {

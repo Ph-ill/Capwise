@@ -68,15 +68,15 @@ const getMoviesFromTMDB = async (type = 'popular', page = 1) => {
 
 // Endpoint to record user interactions
 router.post('/interact', async (req, res) => {
-    const { userId, movieId, interactionType, movieDetails } = req.body;
+    const { profileName, movieId, interactionType, movieDetails } = req.body;
     const userStore = req.db.userStore;
 
-    if (!userId || !movieId || !interactionType || !movieDetails) {
+    if (!profileName || !movieId || !interactionType || !movieDetails) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
     try {
-        await userStore.addInteraction(userId, movieId, interactionType, movieDetails);
+        await userStore.addInteraction(profileName, movieId, interactionType, movieDetails);
         res.status(200).json({ message: 'Interaction recorded successfully' });
     } catch (error) {
         console.error('Error recording interaction:', error);
@@ -217,75 +217,75 @@ const fetchSuggestionBatch = async (userProfile) => {
 };
 
 // Function to manage pre-fetching movies and caching
-const getMoviesForUser = async (userId, userStore) => {
+const getMoviesForUser = async (profileName, userStore) => {
     // If a fetch is already in progress for this user, wait for it to complete.
-    if (prefetchLock.has(userId)) {
-        console.log(`Request for ${userId} is waiting for an ongoing prefetch...`);
-        return prefetchLock.get(userId);
+    if (prefetchLock.has(profileName)) {
+        console.log(`Request for ${profileName} is waiting for an ongoing prefetch...`);
+        return prefetchLock.get(profileName);
     }
 
     // Check the cache for ready-to-serve suggestions.
-    if (suggestionCache.has(userId)) {
-        const suggestions = suggestionCache.get(userId);
-        suggestionCache.delete(userId);
-        console.log(`Serving ${suggestions.length} movies from cache for ${userId}.`);
+    if (suggestionCache.has(profileName)) {
+        const suggestions = suggestionCache.get(profileName);
+        suggestionCache.delete(profileName);
+        console.log(`Serving ${suggestions.length} movies from cache for ${profileName}.`);
         
         // Get the current user profile to get the *already suggested* movies
-        const userProfile = await userStore.getUserProfile(userId);
+        const userProfile = await userStore.getUserProfile(profileName);
 
         // Update the user's suggestedMovies in the DB with the *newly served* movies
         const newSuggestedMovies = suggestions.map(m => ({ movieId: m.id, movieTitle: m.title }));
         const updatedSuggestedMoviesList = [...userProfile.suggestedMovies, ...newSuggestedMovies];
-        await userStore.updateSuggestedMovies(userId, updatedSuggestedMoviesList);
+        await userStore.updateSuggestedMovies(profileName, updatedSuggestedMoviesList);
 
         // Create a profile for the *next* prefetch that includes all suggested movies so far
         const profileForNextPrefetch = { ...userProfile, suggestedMovies: updatedSuggestedMoviesList };
 
         // Asynchronously pre-fetch the next batch using the updated profile
         const prefetchPromise = fetchSuggestionBatch(profileForNextPrefetch);
-        prefetchLock.set(userId, prefetchPromise);
+        prefetchLock.set(profileName, prefetchPromise);
 
         prefetchPromise.then(nextBatch => {
-            suggestionCache.set(userId, nextBatch);
-            console.log(`Successfully pre-fetched ${nextBatch.length} movies for ${userId}.`);
+            suggestionCache.set(profileName, nextBatch);
+            console.log(`Successfully pre-fetched ${nextBatch.length} movies for ${profileName}.`);
         }).catch(err => {
-            console.error(`Prefetch failed for ${userId}:`, err);
+            console.error(`Prefetch failed for ${profileName}:`, err);
         }).finally(() => {
-            prefetchLock.delete(userId);
+            prefetchLock.delete(profileName);
         });
 
         return suggestions;
     }
 
     // If cache is empty and no fetch is in progress, fetch a new batch now.
-    console.log(`Cache miss for ${userId}. Fetching a new batch...`);
-    const userProfile = await userStore.findOrCreate(userId);
+    console.log(`Cache miss for ${profileName}. Fetching a new batch...`);
+    const userProfile = await userStore.findOrCreate(profileName);
 
     const fetchPromise = fetchSuggestionBatch(userProfile);
-    prefetchLock.set(userId, fetchPromise);
+    prefetchLock.set(profileName, fetchPromise);
 
     const suggestions = await fetchPromise;
-    console.log(`Fetched ${suggestions.length} movies for ${userId}.`);
+    console.log(`Fetched ${suggestions.length} movies for ${profileName}.`);
     
     // Update user profile with the newly fetched suggestions
     const newSuggestedMovies = suggestions.map(m => ({ movieId: m.id, movieTitle: m.title }));
     const updatedSuggestedMoviesList = [...userProfile.suggestedMovies, ...newSuggestedMovies];
-    await userStore.updateSuggestedMovies(userId, updatedSuggestedMoviesList);
+    await userStore.updateSuggestedMovies(profileName, updatedSuggestedMoviesList);
 
-    prefetchLock.delete(userId);
+    prefetchLock.delete(profileName);
 
     // Trigger the next prefetch immediately after the current batch is served and saved
     const profileForNextPrefetch = { ...userProfile, suggestedMovies: updatedSuggestedMoviesList };
     const nextPrefetchPromise = fetchSuggestionBatch(profileForNextPrefetch);
-    prefetchLock.set(userId, nextPrefetchPromise);
+    prefetchLock.set(profileName, nextPrefetchPromise);
 
     nextPrefetchPromise.then(nextBatch => {
-        suggestionCache.set(userId, nextBatch);
-        console.log(`Successfully pre-fetched ${nextBatch.length} movies for ${userId} into cache.`);
+        suggestionCache.set(profileName, nextBatch);
+        console.log(`Successfully pre-fetched ${nextBatch.length} movies for ${profileName} into cache.`);
     }).catch(err => {
-        console.error(`Prefetch failed for ${userId}:`, err);
+        console.error(`Prefetch failed for ${profileName}:`, err);
     }).finally(() => {
-        prefetchLock.delete(userId);
+        prefetchLock.delete(profileName);
     });
 
     return suggestions;
@@ -293,19 +293,19 @@ const getMoviesForUser = async (userId, userStore) => {
 
 
 router.post('/suggest', async (req, res) => {
-    const { userId } = req.body;
+    const { profileName } = req.body;
     const userStore = req.db.userStore;
 
-    if (!userId) {
-        return res.status(400).json({ error: 'Missing userId' });
+    if (!profileName) {
+        return res.status(400).json({ error: 'Missing profileName' });
     }
 
     try {
-        const movies = await getMoviesForUser(userId, userStore);
+        const movies = await getMoviesForUser(profileName, userStore);
         res.json({ movies });
     } catch (error) {
-        console.error(`Failed to get suggestions for ${userId}:`, error);
-        prefetchLock.delete(userId); // Ensure lock is released on error
+        console.error(`Failed to get suggestions for ${profileName}:`, error);
+        prefetchLock.delete(profileName); // Ensure lock is released on error
         res.status(500).json({ error: 'Failed to get movie suggestions' });
     }
 });

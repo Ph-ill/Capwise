@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useContext } from 'react';
 import MovieCard from './components/MovieCard';
 import { Container, Box, Typography, IconButton, Stack, CircularProgress, AppBar, Toolbar, Button, Tooltip } from '@mui/material';
-import { Favorite, ThumbUpAlt, ThumbDownAlt, Block, Bookmark, DoNotDisturbOn, Settings as SettingsIcon, BarChart as BarChartIcon, HelpOutline as HelpIcon, Undo as UndoIcon, Home as HomeIcon } from '@mui/icons-material';
+import { Favorite, ThumbUpAlt, ThumbDownAlt, Block, Bookmark, DoNotDisturbOn, Settings as SettingsIcon, BarChart as BarChartIcon, HelpOutline as HelpIcon, Undo as UndoIcon, Home as HomeIcon, Person as PersonIcon } from '@mui/icons-material';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Settings from './pages/Settings';
@@ -28,13 +28,14 @@ import FoldingEffect from './components/FoldingEffect';
 import { MovieContext, MovieProvider } from './context/MovieContext'; // Import MovieContext and MovieProvider
 import { NotificationProvider } from './notifications/NotificationContext';
 import Notification from './notifications/Notification';
+import UserSelection from './components/UserSelection';
 
 function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHotkeyModal }) {
   const {
     movies,
     currentIndex,
     loading,
-    userId,
+    profileName,
     isInitialLoad,
     fetchMovies,
     handleInteraction: contextHandleInteraction, // Rename to avoid conflict
@@ -47,7 +48,7 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
   const currentMovie = movies[currentIndex];
 
   const handleInteraction = useCallback(async (action) => {
-    if (!currentMovie || !userId) return;
+    if (!currentMovie || !profileName) return;
 
     let animationProps = {};
     switch (action) {
@@ -88,12 +89,12 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
       }
       setExitAnimation({}); // Reset animation for next card
     }, 200); // Match with exit transition duration
-  }, [currentIndex, currentMovie, fetchMovies, movies.length, userId, contextHandleInteraction, setCurrentIndex]);
+  }, [currentIndex, currentMovie, fetchMovies, movies.length, profileName, contextHandleInteraction, setCurrentIndex]);
 
   const handleUndo = useCallback(async () => {
-    if (!userId) return;
+    if (!profileName) return;
     await contextHandleUndo();
-  }, [userId, contextHandleUndo]);
+  }, [profileName, contextHandleUndo]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -228,6 +229,21 @@ function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHot
       </Stack>
 
       <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
+      <IconButton
+        sx={{
+          position: 'absolute',
+          bottom: 16,
+          right: 16,
+          backgroundColor: 'primary.main',
+          color: 'white',
+          '&:hover': {
+            backgroundColor: 'primary.dark',
+          },
+        }}
+        onClick={handleOpenHotkeyModal}
+      >
+        <HelpIcon />
+      </IconButton>
     </Box>
   );
 }
@@ -240,6 +256,7 @@ function App() {
     // Ensure the stored index is within the bounds of the themes array
     return (parsedIndex >= 0 && parsedIndex < themes.length) ? parsedIndex : 0;
   });
+  const [selectedProfileName, setSelectedProfileName] = useState(localStorage.getItem('activeProfile'));
 
   const handleOpenHotkeyModal = () => setHotkeyModalOpen(true);
   const handleCloseHotkeyModal = () => setHotkeyModalOpen(false);
@@ -247,6 +264,11 @@ function App() {
   const setThemeIndex = (index) => {
     setCurrentThemeIndex(index);
     localStorage.setItem('selectedThemeIndex', index);
+  };
+
+  const handleProfileSelected = (profileName) => {
+    setSelectedProfileName(profileName);
+    localStorage.setItem('activeProfile', profileName);
   };
 
   const activeTheme = themes[currentThemeIndex];
@@ -288,19 +310,28 @@ function App() {
               <Button color="inherit" component={Link} to="/settings">
                 <SettingsIcon sx={{ mr: 0.5 }} /> Settings
               </Button>
-              <Button color="inherit" onClick={handleOpenHotkeyModal}>
-                <HelpIcon sx={{ mr: 0.5 }} /> Hotkeys
-              </Button>
+              {selectedProfileName && (
+                <Button color="inherit" component={Link} to="/" onClick={() => {
+                  localStorage.removeItem('activeProfile');
+                  setSelectedProfileName(null);
+                }}>
+                  <PersonIcon sx={{ mr: 0.5 }} /> {selectedProfileName}
+                </Button>
+              )}
             </Toolbar>
           </AppBar>
-          <MovieProvider>
-            <Routes>
-              <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
-              <Route path="/settings" element={<Settings setThemeIndex={setThemeIndex} currentThemeIndex={currentThemeIndex} />} />
-              <Route path="/infographic" element={<Infographic />} />
-              <Route path="/watchlist" element={<Watchlist />} />
-            </Routes>
-          </MovieProvider>
+          {selectedProfileName ? (
+            <MovieProvider profileName={selectedProfileName}>
+              <Routes>
+                <Route path="/" element={<MovieSwipePage hotkeyModalOpen={hotkeyModalOpen} handleOpenHotkeyModal={handleOpenHotkeyModal} handleCloseHotkeyModal={handleCloseHotkeyModal} />} />
+                <Route path="/settings" element={<Settings setThemeIndex={setThemeIndex} currentThemeIndex={currentThemeIndex} />} />
+                <Route path="/infographic" element={<Infographic />} />
+                <Route path="/watchlist" element={<Watchlist />} />
+              </Routes>
+            </MovieProvider>
+          ) : (
+            <UserSelection onProfileSelected={handleProfileSelected} />
+          )}
           <HotkeyModal open={hotkeyModalOpen} handleClose={handleCloseHotkeyModal} />
           <Notification />
         </Box>
