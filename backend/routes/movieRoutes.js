@@ -131,6 +131,7 @@ const fetchSuggestionBatch = async (userProfile) => {
 };
 
     const fetchAI = async () => {
+        let suggestions = []; // Initialize suggestions here
         try {
             const likedMovies = userProfile.interactions.filter(i => i.type === 'like').map(i => i.movieDetails.title);
             const strongLikedMovies = userProfile.interactions.filter(i => i.type === 'strong_like').map(i => i.movieDetails.title);
