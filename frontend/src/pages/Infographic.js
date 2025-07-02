@@ -306,11 +306,9 @@ const Infographic = () => {
 
     // Add axis labels
     ctx.textAlign = 'center';
-    ctx.fillText(title, canvas.width / 2, 30);
     ctx.save();
     ctx.translate(padding / 2, canvas.height / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('Preference Score', 0, 0);
     ctx.restore();
   };
 
@@ -351,7 +349,7 @@ const Infographic = () => {
       </Typography>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ color: activeTheme.theme.palette.text.primary }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary }}>
           Interaction Statistics
         </Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around', mt: 2 }}>
@@ -365,7 +363,7 @@ const Infographic = () => {
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ color: activeTheme.theme.palette.text.primary }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary }}>
           Genre Preferences
         </Typography>
         <Box sx={{ width: '100%', height: '350px' }}>
@@ -374,7 +372,7 @@ const Infographic = () => {
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ color: activeTheme.theme.palette.text.primary }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary }}>
           Top Directors
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -409,7 +407,7 @@ const Infographic = () => {
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ color: activeTheme.theme.palette.text.primary }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary }}>
           Top Writers
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -444,7 +442,7 @@ const Infographic = () => {
       </Paper>
 
       <Paper elevation={3} sx={{ p: 3, mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ color: activeTheme.theme.palette.text.primary }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ color: activeTheme.theme.palette.text.primary }}>
           Top Actors
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -479,7 +477,7 @@ const Infographic = () => {
       </Paper>
 
       <Paper elevation={3} sx={{ mb: 4, bgcolor: activeTheme.theme.palette.background.paper }}>
-        <Typography variant="h5" gutterBottom sx={{ p: 3, color: activeTheme.theme.palette.text.primary }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ p: 3, color: activeTheme.theme.palette.text.primary }}>
           Movies by Decade
         </Typography>
         <Box sx={{ width: '100%', height: '350px', p: 3 }}>
