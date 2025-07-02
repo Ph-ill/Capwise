@@ -254,6 +254,16 @@ const Infographic = () => {
     ctx.lineTo(canvas.width - padding, canvas.height - padding);
     ctx.stroke();
 
+    // Draw zero line
+    const zeroY = (canvas.height - padding) - (maxScore / (2 * maxScore)) * chartHeight;
+    ctx.beginPath();
+    ctx.strokeStyle = textColor + "88"; // Slightly transparent
+    ctx.setLineDash([5, 5]); // Dashed line
+    ctx.moveTo(padding, zeroY);
+    ctx.lineTo(canvas.width - padding, zeroY);
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset line dash
+
     // Draw labels and points
     ctx.fillStyle = textColor;
     ctx.font = `12px ${theme.theme.typography.fontFamily}`;

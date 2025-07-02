@@ -175,7 +175,7 @@ class UserStore {
                 newTasteProfile.interactionCounts[type]++;
             }
 
-            const score = (type === 'like' || type === 'strong_like') ? 1 : -1;
+            const score = (type === 'like' || type === 'strong_like') ? 1 : 0;
 
             // Update genres
             if (movieDetails.genres && Array.isArray(movieDetails.genres)) {
