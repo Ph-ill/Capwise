@@ -1,4 +1,12 @@
-# Capwise
+<p align="center">
+  <picture style="display: block; margin: 0 auto; width: 25%;">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Ph-ill/Capwise/blob/master/frontend/src/assets/Logo_Light.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/Ph-ill/Capwise/blob/master/frontend/src/assets/Logo.png">
+    <img src="https://github.com/Ph-ill/Capwise/blob/master/frontend/src/assets/Logo.png" style="width: 10%; display: block; margin: 0 auto;">
+  </picture>
+</p>
+
+<h1 align="center">Capwise</h1>
 
 Capwise is a web application designed to help users discover movies they'll love. By swiping through movie suggestions, users provide feedback that helps the application build a personalized taste profile. This profile is then used to power intelligent movie recommendations, leveraging Google's Gemini API for advanced suggestions.
 
