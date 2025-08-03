@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { Container, Typography, Box, CircularProgress, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import WatchlistItem from '../components/WatchlistItem'; // Import the new WatchlistItem component
 import { MovieContext } from '../context/MovieContext';
+import { themes } from '../themes';
 
 const API_BASE_URL = 'http://localhost:5001/api';
 
@@ -10,6 +11,9 @@ function Watchlist() {
   const [watchlistMovies, setWatchlistMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('watchlist'); // Default filter to watchlist
+
+  const currentThemeIndex = parseInt(localStorage.getItem('selectedThemeIndex') || '0', 10);
+  const activeTheme = themes[currentThemeIndex];
 
   const getWatchlist = useCallback(async () => {
     if (!profileName) {
@@ -61,7 +65,7 @@ function Watchlist() {
   }
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="md" sx={{ pb: 4 }}>
       <Box sx={{ my: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
         <ToggleButtonGroup
@@ -69,7 +73,24 @@ function Watchlist() {
           exclusive
           onChange={handleFilterChange}
           aria-label="movie interaction filter"
-          sx={{ mb: 3 }}
+          sx={{
+            mb: 3,
+            bgcolor: activeTheme.theme.palette.background.paper, // Background of the group
+            '& .MuiToggleButton-root': {
+              borderColor: activeTheme.theme.palette.divider, // Border of individual buttons
+              color: activeTheme.theme.palette.text.primary, // Text color
+              '&.Mui-selected': {
+                bgcolor: activeTheme.theme.palette.primary.main, // Selected button background
+                color: activeTheme.theme.palette.primary.contrastText, // Selected button text color
+                '&:hover': {
+                  bgcolor: activeTheme.theme.palette.primary.dark, // Selected button hover
+                },
+              },
+              '&:hover': {
+                bgcolor: activeTheme.theme.palette.action.hover, // Hover for unselected buttons
+              },
+            },
+          }}
         >
           <ToggleButton value="all" aria-label="all movies">All</ToggleButton>
           <ToggleButton value="strong_like" aria-label="super liked">Super Liked</ToggleButton>

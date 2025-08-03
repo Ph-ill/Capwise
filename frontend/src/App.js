@@ -29,6 +29,49 @@ import { MovieContext, MovieProvider } from './context/MovieContext'; // Import 
 import { NotificationProvider } from './notifications/NotificationContext';
 import Notification from './notifications/Notification';
 import UserSelection from './components/UserSelection';
+import Logo from './assets/Logo.png';
+import LogoLight from './assets/Logo_Light.png';
+
+// Helper function to determine if a color is light or dark
+const isColorLight = (hexColor) => {
+  if (!hexColor) return true; // Default to light if no color provided
+  const r = parseInt(hexColor.substring(1, 3), 16);
+  const g = parseInt(hexColor.substring(3, 5), 16);
+  const b = parseInt(hexColor.substring(5, 7), 16);
+  // HSP (Highly Sensitive Poo) equation from http://alienryderflex.com/hsp.html
+  const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+  return hsp > 127.5; // Standard threshold for light/dark
+};
+
+// Helper function to convert various color formats to hex
+const colorToHex = (color) => {
+  if (!color) return null;
+
+  // If it's already a hex color
+  if (color.startsWith('#')) {
+    return color;
+  }
+
+  // If it's an RGB or RGBA color
+  if (color.startsWith('rgb')) {
+    const rgba = color.match(/\d+(\.\d+)?/g).map(Number);
+    // Ignore alpha for luminosity calculation
+    return '#' + ((1 << 24) + (rgba[0] << 16) + (rgba[1] << 8) + rgba[2]).toString(16).slice(1);
+  }
+
+  // If it's a named color (very basic, can be expanded)
+  const namedColors = {
+    black: '#000000',
+    white: '#FFFFFF',
+    // Add more named colors as needed
+  };
+  if (namedColors[color.toLowerCase()]) {
+    return namedColors[color.toLowerCase()];
+  }
+
+  // Fallback for other formats or invalid colors
+  return null;
+};
 
 function MovieSwipePage({ hotkeyModalOpen, handleOpenHotkeyModal, handleCloseHotkeyModal }) {
   const {
@@ -295,9 +338,31 @@ function App() {
             {activeTheme.name === 'Inception' && <FoldingEffect />}
             <AppBar position="static" sx={{ background: activeTheme.appBarGradient }}>
             <Toolbar>
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1.5, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
-                Capwise
-              </Typography>
+              <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+                {/* Determine logo based on text color luminosity */}
+                {(() => {
+                  const textColor = activeTheme.theme.palette.text.primary;
+                  const hexTextColor = colorToHex(textColor);
+                  let finalLogoSrc;
+
+                  if (activeTheme.preferredLogo === 'dark') {
+                    finalLogoSrc = Logo; // Use the dark logo
+                  } else if (activeTheme.preferredLogo === 'light') {
+                    finalLogoSrc = LogoLight; // Use the light logo
+                  } else {
+                    // Fallback to luminosity detection
+                    const useLightLogoBasedOnLuminosity = isColorLight(hexTextColor);
+                    finalLogoSrc = useLightLogoBasedOnLuminosity ? Logo : LogoLight;
+                  }
+
+                  return (
+                    <img src={finalLogoSrc} alt="Capwise Logo" style={{ height: '40px', marginRight: '10px' }} />
+                  );
+                })()}
+                <Typography variant="h6" component="div" sx={{ fontWeight: 'bold', letterSpacing: 1.5, textShadow: '2px 2px 4px rgba(0,0,0,0.3)' }}>
+                  Capwise
+                </Typography>
+              </Box>
               <Button color="inherit" component={Link} to="/">
                 <HomeIcon sx={{ mr: 0.5 }} /> Home
               </Button>

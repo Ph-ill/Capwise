@@ -282,6 +282,7 @@ export const themes = [
     }),
     backgroundGradient: null,
     appBarGradient: null,
+    preferredLogo: 'dark',
   },
   {
     name: 'Capybara',
@@ -464,6 +465,7 @@ export const themes = [
     }),
     backgroundGradient: null,
     appBarGradient: null,
+    preferredLogo: 'light',
   },
   {
     name: 'Rainbow Dash',
@@ -577,7 +579,7 @@ export const themes = [
           main: '#00008B', // Dark Blue
         },
         secondary: {
-          main: '#FF4500', // OrangeRed (for neon accents)
+          main: '#FF4500', // OrangeRed (for accents)
         },
         background: {
           default: '#1A1A2E', // Very dark blue-purple
@@ -594,32 +596,34 @@ export const themes = [
     }),
     backgroundGradient: null,
     appBarGradient: null,
+    preferredLogo: 'dark',
   },
   {
     name: 'Interstellar',
     theme: createTheme({
       palette: {
         primary: {
-          main: '#6A0DAD', // Dark Purple
+          main: '#6A0DAD',
         },
         secondary: {
-          main: '#FFD700', // Gold
+          main: '#FFD700',
         },
         background: {
-          default: '#000000', // Black
-          paper: '#1A001A', // Very dark purple
+          default: '#000000',
+          paper: '#1A001A',
         },
         text: {
-          primary: '#E0FFFF', // Light Cyan
-          secondary: '#B0C4DE', // Light Steel Blue
+          primary: '#E0FFFF',
+          secondary: '#B0C4DE',
         },
       },
       typography: {
-        fontFamily: '"Orbitron", sans-serif', // Futuristic font
+        fontFamily: '"Orbitron", sans-serif',
       },
     }),
     backgroundGradient: null,
     appBarGradient: null,
+    preferredLogo: 'light',
   },
   {
     name: 'The Lord of the Rings',

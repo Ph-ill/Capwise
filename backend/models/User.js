@@ -42,27 +42,33 @@ class UserStore {
 
     async addInteraction(profileName, movieId, interactionType, movieDetails) {
         return new Promise((resolve, reject) => {
-            this.db.findOne({ profileName }, (err, user) => {
-                if (err) return reject(err);
-                if (!user) return reject(new Error('User not found'));
+            this.findOrCreate(profileName)
+                .then(user => {
+                    if (!user) return reject(new Error('User could not be found or created'));
 
-                // Add the new interaction
-                console.log(`Adding interaction for movieId: ${movieId} (Type: ${typeof movieId})`);
-                user.interactions.push({ movieId, type: interactionType, timestamp: new Date(), movieDetails });
-
-                // Recalculate taste profile from scratch for accuracy
-                user.tasteProfile = this._recalculateTasteProfile(user.interactions);
-
-                this.db.update(
-                    { profileName },
-                    { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile } },
-                    { upsert: true },
-                    (err, numReplaced) => {
-                        if (err) return reject(err);
-                        resolve(numReplaced);
+                    // Ensure interactions array is initialized
+                    if (!user.interactions) {
+                        user.interactions = [];
                     }
-                );
-            });
+
+                    // Add the new interaction
+                    console.log(`Adding interaction for movieId: ${movieId} (Type: ${typeof movieId})`);
+                    user.interactions.push({ movieId, type: interactionType, timestamp: new Date(), movieDetails });
+
+                    // Recalculate taste profile from scratch for accuracy
+                    user.tasteProfile = this._recalculateTasteProfile(user.interactions);
+
+                    this.db.update(
+                        { profileName },
+                        { $set: { interactions: user.interactions, tasteProfile: user.tasteProfile } },
+                        { upsert: true },
+                        (err, numReplaced) => {
+                            if (err) return reject(err);
+                            resolve(numReplaced);
+                        }
+                    );
+                })
+                .catch(err => reject(err));
         });
     }
 
