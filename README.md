@@ -36,19 +36,19 @@ Here are some screenshots of the application in action. Click on a thumbnail to 
 
 ### Main Page (with various themes)
 [<img src="Images/Main_Page.png" width="200">](Images/Main_Page.png)
-[<img src="Images/Main_Page_Theme_1.png" width="200">](Images/Main_Page_Theme_1.png?raw=true)
-[<img src="Images/Main_Page_Theme_2.png" width="200">](Images/Main_Page_Theme_2.png?raw=true)
-[<img src="Images/Main_Page_Theme_3.png" width="200">](Images/Main_Page_Theme_3.png?raw=true)
-[<img src="Images/Main_Page_Theme_4.png" width="200">](Images/Main_Page_Theme_4.png?raw=true)
+[<img src="Images/Main_Page_Theme_1.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page.png?raw=true))
+[<img src="Images/Main_Page_Theme_2.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page_Theme_2.png?raw=true)
+[<img src="Images/Main_Page_Theme_3.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page_Theme_3.png?raw=true)
+[<img src="Images/Main_Page_Theme_4.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page_Theme_4.png?raw=true)
 
 ### Information Pages
-[<img src="Images/Info_Page_1.png" width="200">](Images/Info_Page_1.png?raw=true)
-[<img src="Images/Info_Page_2.png" width="200">](Images/Info_Page_2.png?raw=true)
-[<img src="Images/Info_Page_3.png" width="200">](Images/Info_Page_3.png?raw=true)
+[<img src="Images/Info_Page_1.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Info_Page_1.png?raw=true)
+[<img src="Images/Info_Page_2.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Info_Page_2.png?raw=true)
+[<img src="Images/Info_Page_3.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Info_Page_3.png?raw=true)
 
 ### Profile and Settings
-[<img src="Images/Profile_Page.png" width="200">](Images/Profile_Page.png?raw=true)
-[<img src="Images/Settings_Page.png" width="200">](Images/Settings_Page.png?raw=true)
+[<img src="Images/Profile_Page.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Profile_Page.png?raw=true)
+[<img src="Images/Settings_Page.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Settings_Page.png?raw=true)
 
 ### Records Page
-[<img src="Images/Records_Page.png" width="200">](Images/Records_Page.png?raw=true)
+[<img src="Images/Records_Page.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Records_Page.png?raw=true)
