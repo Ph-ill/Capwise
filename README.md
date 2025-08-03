@@ -1,4 +1,4 @@
-<p align="center">
+  <p align="center">
   <picture style="display: block; margin: 0 auto; width: 25%;">
     <source media="(prefers-color-scheme: dark)" srcset="https://github.com/Ph-ill/Capwise/blob/master/frontend/src/assets/Logo_Light.png">
     <source media="(prefers-color-scheme: light)" srcset="https://github.com/Ph-ill/Capwise/blob/master/frontend/src/assets/Logo.png">
@@ -35,20 +35,20 @@ Further instructions on setting up the frontend and backend will be provided in 
 Here are some screenshots of the application in action. Click on a thumbnail to view the full-sized image.
 
 ### Main Page (with various themes)
-[<img src="Images/Main_Page.png" width="200">](Images/Main_Page.png)
-[<img src="Images/Main_Page_Theme_1.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page.png?raw=true))
-[<img src="Images/Main_Page_Theme_2.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page_Theme_2.png?raw=true)
-[<img src="Images/Main_Page_Theme_3.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page_Theme_3.png?raw=true)
-[<img src="Images/Main_Page_Theme_4.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Main_Page_Theme_4.png?raw=true)
+[<img src="Images/Main_Page.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Main_Page.png)
+[<img src="Images/Main_Page_Theme_1.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Main_Page_Theme_1.png)
+[<img src="Images/Main_Page_Theme_2.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Main_Page_Theme_2.png)
+[<img src="Images/Main_Page_Theme_3.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Main_Page_Theme_3.png)
+[<img src="Images/Main_Page_Theme_4.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Main_Page_Theme_4.png)
 
 ### Information Pages
-[<img src="Images/Info_Page_1.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Info_Page_1.png?raw=true)
-[<img src="Images/Info_Page_2.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Info_Page_2.png?raw=true)
-[<img src="Images/Info_Page_3.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Info_Page_3.png?raw=true)
+[<img src="Images/Info_Page_1.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Info_Page_1.png)
+[<img src="Images/Info_Page_2.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Info_Page_2.png)
+[<img src="Images/Info_Page_3.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Info_Page_3.png)
 
 ### Profile and Settings
-[<img src="Images/Profile_Page.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Profile_Page.png?raw=true)
-[<img src="Images/Settings_Page.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Settings_Page.png?raw=true)
+[<img src="Images/Profile_Page.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Profile_Page.png)
+[<img src="Images/Settings_Page.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Settings_Page.png)
 
 ### Records Page
-[<img src="Images/Records_Page.png" width="200">](https://github.com/Ph-ill/Capwise/blob/master/Images/Records_Page.png?raw=true)
+[<img src="Images/Records_Page.png" width="200">](https://raw.githubusercontent.com/Ph-ill/Capwise/refs/heads/master/Images/Records_Page.png)
