@@ -24,23 +24,23 @@ Further instructions on setting up the frontend and backend will be provided in 
 
 ## Screenshots
 
-Here are some screenshots of the application in action:
+Here are some screenshots of the application in action. Click on a thumbnail to view the full-sized image.
 
-### Main Page
-![Main Page](Images/Main_Page.png)
-![Main Page Theme 1](Images/Main_Page_Theme_1.png)
-![Main Page Theme 2](Images/Main_Page_Theme_2.png)
-![Main Page Theme 3](Images/Main_Page_Theme_3.png)
-![Main Page Theme 4](Images/Main_Page_Theme_4.png)
+### Main Page (with various themes)
+[<img src="Images/Main_Page.png" width="200">](Images/Main_Page.png)
+[<img src="Images/Main_Page_Theme_1.png" width="200">](Images/Main_Page_Theme_1.png)
+[<img src="Images/Main_Page_Theme_2.png" width="200">](Images/Main_Page_Theme_2.png)
+[<img src="Images/Main_Page_Theme_3.png" width="200">](Images/Main_Page_Theme_3.png)
+[<img src="Images/Main_Page_Theme_4.png" width="200">](Images/Main_Page_Theme_4.png)
 
 ### Information Pages
-![Info Page 1](Images/Info_Page_1.png)
-![Info Page 2](Images/Info_Page_2.png)
-![Info Page 3](Images/Info_Page_3.png)
+[<img src="Images/Info_Page_1.png" width="200">](Images/Info_Page_1.png)
+[<img src="Images/Info_Page_2.png" width="200">](Images/Info_Page_2.png)
+[<img src="Images/Info_Page_3.png" width="200">](Images/Info_Page_3.png)
 
 ### Profile and Settings
-![Profile Page](Images/Profile_Page.png)
-![Settings Page](Images/Settings_Page.png)
+[<img src="Images/Profile_Page.png" width="200">](Images/Profile_Page.png)
+[<img src="Images/Settings_Page.png" width="200">](Images/Settings_Page.png)
 
 ### Records Page
-![Records Page](Images/Records_Page.png)
+[<img src="Images/Records_Page.png" width="200">](Images/Records_Page.png)
